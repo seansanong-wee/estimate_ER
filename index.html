@@ -374,7 +374,7 @@
           );
         }
 
-        function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete, onPrintAll }) {
+function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete, onPrintAll }) {
           const [filter, setFilter] = useState('all');
           const [searchTerm, setSearchTerm] = useState('');
 
@@ -459,13 +459,14 @@
                       <th className="p-4 font-medium">ตำแหน่ง</th>
                       <th className="p-4 font-medium">แผนก/กลุ่มงาน</th>
                       <th className="p-4 font-medium">วันที่ประเมิน</th>
+                      {/* ซ่อนหัวตารางพวกนี้ถ้าไม่ได้ล็อกอิน */}
                       {isLoggedIn && (
                         <>
                           <th className="p-4 font-medium text-center">คะแนนเฉลี่ยรวม</th>
                           <th className="p-4 font-medium text-center">ระดับ</th>
+                          <th className="p-4 font-medium text-center">จัดการ</th>
                         </>
                       )}
-                      <th className="p-4 font-medium text-center">จัดการ</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -478,6 +479,7 @@
                           <td className="p-4 text-gray-600">{emp.department || ''}</td>
                           <td className="p-4 text-gray-600">{emp.date || ''}</td>
                           
+                          {/* ซ่อนข้อมูลส่วนการจัดการถ้าไม่ได้ล็อกอิน */}
                           {isLoggedIn && (
                             <>
                               <td className="p-4 text-center font-bold text-blue-600">
@@ -492,32 +494,28 @@
                                   <span className="text-gray-400">-</span>
                                 )}
                               </td>
-                            </>
-                          )}
-                          
-                          <td className="p-4">
-                            <div className="flex justify-center gap-2">
-                              <button onClick={() => onEdit(emp)} className="text-blue-500 hover:text-blue-700 p-2 rounded-lg hover:bg-blue-50 transition-colors" title="แก้ไข/ประเมิน">
-                                <Edit className="w-5 h-5" />
-                              </button>
-                              {isLoggedIn && (
-                                <>
+                              <td className="p-4">
+                                <div className="flex justify-center gap-2">
+                                  <button onClick={() => onEdit(emp)} className="text-blue-500 hover:text-blue-700 p-2 rounded-lg hover:bg-blue-50 transition-colors" title="แก้ไข/ประเมิน">
+                                    <Edit className="w-5 h-5" />
+                                  </button>
                                   <button onClick={() => onPrint(emp)} className="text-gray-400 hover:text-slate-700 p-2 rounded-lg hover:bg-slate-100 transition-colors" title="พิมพ์รายบุคคล">
                                     <Printer className="w-5 h-5" />
                                   </button>
                                   <button onClick={() => onDelete(emp)} className="text-red-400 hover:text-red-600 p-2 rounded-lg hover:bg-red-50 transition-colors" title="ลบข้อมูล">
                                     <Trash2 className="w-5 h-5" />
                                   </button>
-                                </>
-                              )}
-                            </div>
-                          </td>
+                                </div>
+                              </td>
+                            </>
+                          )}
                         </tr>
                       );
                     })}
                     {filteredEmployees.length === 0 && (
                       <tr>
-                        <td colSpan={isLoggedIn ? 7 : 5} className="p-8 text-center text-gray-500">
+                        {/* ปรับขนาดการรวมคอลัมน์ให้พอดีกับตอนที่ล็อกอินและไม่ได้ล็อกอิน */}
+                        <td colSpan={isLoggedIn ? 7 : 4} className="p-8 text-center text-gray-500">
                           ไม่พบข้อมูลการประเมิน
                         </td>
                       </tr>
