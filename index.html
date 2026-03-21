@@ -5,21 +5,43 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ระบบประเมินประสิทธิภาพการปฏิบัติงาน</title>
     
+    <!-- นำเข้า React และ ReactDOM แบบ CDN -->
     <script src="https://unpkg.com/react@18/umd/react.development.js" crossorigin></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     
+    <!-- นำเข้า Babel สำหรับแปลงโค้ด JSX ให้ทำงานบนเบราว์เซอร์ -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
+    <!-- นำเข้า Tailwind CSS สำหรับความสวยงาม -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <style>
-        /* สไตล์พิเศษสำหรับซ่อนปุ่มเวลาสั่งพิมพ์กระดาษ */
+        /* สไตล์พิเศษสำหรับการสั่งพิมพ์กระดาษให้ออกมาเป็น A4 สมบูรณ์แบบ */
         @media print {
             .print\:hidden { display: none !important; }
-            body { background: white; }
-            /* ป้องกันตารางถูกตัดขาดกลางหน้าเวลาปริ้น */
-            table { page-break-inside: auto }
-            tr    { page-break-inside: avoid; page-break-after: auto }
+            body { background: white; margin: 0; padding: 0; }
+            @page { size: A4; margin: 15mm; } /* ตั้งระยะขอบกระดาษ A4 */
+            
+            /* ลบเงาและปรับขนาดกล่องให้เต็ม 100% ในหน้าพิมพ์ */
+            .max-w-\[210mm\] { 
+                max-width: 100% !important; 
+                width: 100% !important; 
+                margin: 0 !important; 
+                box-shadow: none !important; 
+                min-height: auto !important;
+            }
+            .print\:p-0 { padding: 0 !important; }
+            
+            /* การจัดการตารางและหน้ากระดาษ */
+            table { page-break-inside: auto; }
+            tr    { page-break-inside: avoid; page-break-after: auto; }
+            thead { display: table-header-group; } /* ให้หัวตารางโผล่ทุกหน้าถ้าเนื้อหายาว */
+            
+            /* ป้องกันการถูกตัดขาดกลางหน้ากระดาษ (เช่น ลายเซ็นถูกตัดครึ่ง) */
+            .break-inside-avoid { 
+                page-break-inside: avoid; 
+                break-inside: avoid; 
+            }
         }
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         /* กำหนดฟอนต์หลักเป็น TH Sarabun PSK ตามหลักสารบรรณ */
@@ -27,6 +49,7 @@
     </style>
 </head>
 <body class="bg-gray-50">
+    <!-- จุดที่ React จะนำ UI มาแสดงผล -->
     <div id="root"></div>
 
     <script type="text/babel">
@@ -52,7 +75,7 @@
         const Trash2 = ({className, ...props}) => <svg className={className} {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>;
 
         // ==========================================
-        // การตั้งค่าระบบ
+        // การตั้งค่าระบบ URL Google Apps Script
         // ==========================================
         const GOOGLE_SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxQblgAfEKseQSqwk8yPV5ecKZqqVAJ6Xq8P75FLkokSF9hbnB2CPaGrJ1nvjAsfLBDQQ/exec"; 
 
@@ -244,9 +267,9 @@
                   </div>
                 </header>
 
-                <div className="flex-1 overflow-auto p-6 relative">
+                <div className="flex-1 overflow-auto p-6 relative print:overflow-visible">
                   {toastMessage && (
-                    <div className="absolute top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-bounce">
+                    <div className="absolute top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-bounce print:hidden">
                       <CheckCircle className="w-5 h-5" />
                       {toastMessage}
                     </div>
@@ -374,7 +397,7 @@
           );
         }
 
-function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete, onPrintAll }) {
+        function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete, onPrintAll }) {
           const [filter, setFilter] = useState('all');
           const [searchTerm, setSearchTerm] = useState('');
 
@@ -459,7 +482,6 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
                       <th className="p-4 font-medium">ตำแหน่ง</th>
                       <th className="p-4 font-medium">แผนก/กลุ่มงาน</th>
                       <th className="p-4 font-medium">วันที่ประเมิน</th>
-                      {/* ซ่อนหัวตารางพวกนี้ถ้าไม่ได้ล็อกอิน */}
                       {isLoggedIn && (
                         <>
                           <th className="p-4 font-medium text-center">คะแนนเฉลี่ยรวม</th>
@@ -479,7 +501,6 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
                           <td className="p-4 text-gray-600">{emp.department || ''}</td>
                           <td className="p-4 text-gray-600">{emp.date || ''}</td>
                           
-                          {/* ซ่อนข้อมูลส่วนการจัดการถ้าไม่ได้ล็อกอิน */}
                           {isLoggedIn && (
                             <>
                               <td className="p-4 text-center font-bold text-blue-600">
@@ -514,7 +535,6 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
                     })}
                     {filteredEmployees.length === 0 && (
                       <tr>
-                        {/* ปรับขนาดการรวมคอลัมน์ให้พอดีกับตอนที่ล็อกอินและไม่ได้ล็อกอิน */}
                         <td colSpan={isLoggedIn ? 7 : 4} className="p-8 text-center text-gray-500">
                           ไม่พบข้อมูลการประเมิน
                         </td>
@@ -892,7 +912,7 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
         }
 
         // ==========================================
-        // คอมโพเนนต์สำหรับ พิมพ์ใบรวมทุกรายชื่อ
+        // คอมโพเนนต์สำหรับ พิมพ์ใบรวมทุกรายชื่อ (ลื่นไหลตามจำนวนคน)
         // ==========================================
         function PrintAllView({ employees, onBack }) {
           useEffect(() => {
@@ -900,7 +920,7 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
           }, []);
 
           return (
-            <div className="max-w-[210mm] mx-auto bg-white min-h-[297mm] shadow-xl mb-10">
+            <div className="max-w-[210mm] mx-auto bg-white shadow-xl mb-10 print:shadow-none print:m-0">
               <div className="bg-slate-800 text-white p-4 flex justify-between items-center print:hidden rounded-t-lg">
                 <button onClick={onBack} className="flex items-center gap-2 hover:text-blue-300 transition-colors">
                   <ChevronLeft className="w-5 h-5" /> กลับไปแดชบอร์ด
@@ -911,14 +931,15 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
               </div>
 
               {/* บังคับฟอนต์ TH Sarabun PSK และขนาดข้อความปกติที่ 16pt */}
-              <div className="p-12 text-black bg-white font-['TH_Sarabun_PSK','Sarabun',sans-serif] text-[16pt] leading-[1.3]">
-                <div className="text-center mb-8">
+              <div className="p-8 print:p-0 text-black bg-white font-['TH_Sarabun_PSK','Sarabun',sans-serif] text-[16pt] leading-[1.3]">
+                <div className="text-center mb-6">
                   <h1 className="text-[18pt] font-bold mb-1">ใบสรุปผลการประเมินประสิทธิภาพการปฏิบัติงาน (รวมทุกรายชื่อ)</h1>
                   <h2 className="text-[18pt] font-normal">งานอุบัติเหตุฉุกเฉินและนิติเวช</h2>
                   <h2 className="text-[18pt] font-normal">โรงพยาบาลเสลภูมิ</h2>
                   <h2 className="text-[18pt] font-normal">สังกัดสำนักงานปลัดกระทรวงสาธารณสุข</h2>
                 </div>
 
+                {/* ตารางจะไหลหน้ากระดาษและมีหัวตารางทุกหน้าอัตโนมัติ */}
                 <table className="w-full border-collapse border border-black mt-4">
                   <thead>
                     <tr className="bg-gray-100 text-center font-bold">
@@ -939,14 +960,14 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
                       if (isEvaluated) {
                         if (score >= 60) {
                           resultText = 'ผ่าน';
-                          resultClass = 'text-green-600';
+                          resultClass = 'text-green-600 print:text-black';
                         } else {
                           resultText = 'ไม่ผ่าน';
-                          resultClass = 'text-red-600';
+                          resultClass = 'text-red-600 print:text-black';
                         }
                       } else {
                         resultText = 'รอประเมิน';
-                        resultClass = 'text-gray-500 font-normal';
+                        resultClass = 'text-gray-500 font-normal print:text-black';
                       }
 
                       return (
@@ -971,19 +992,19 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
                   </tbody>
                 </table>
                 
-                {/* ลายเซ็นด้านล่างให้อยู่กึ่งกลางและเรียงบน-ล่าง */}
-                <div className="mt-16 flex flex-col items-center gap-16">
+                {/* ลายเซ็นด้านล่าง (ป้องกันการถูกตัดแยกหน้า) */}
+                <div className="mt-12 flex flex-col items-center gap-12 break-inside-avoid">
                    <div className="text-center">
-                      <p className="mb-10 font-bold text-[18pt]">ผู้รายงาน</p>
+                      <p className="mb-8 font-bold text-[18pt]">ผู้รายงาน</p>
                       <p className="whitespace-nowrap">( นายทวี แสนสนอง )</p>
-                      <p className="mt-2 whitespace-nowrap">ตำแหน่ง หัวหน้างานการพยาบาลอุบัติเหตุฉุกเฉินและนิติเวช</p>
-                      <p className="mt-2">วันที่ ......../......../..........</p>
+                      <p className="mt-1 whitespace-nowrap">ตำแหน่ง หัวหน้างานการพยาบาลอุบัติเหตุฉุกเฉินและนิติเวช</p>
+                      <p className="mt-1">วันที่ ......../......../..........</p>
                     </div>
                    <div className="text-center">
-                      <p className="mb-10 font-bold text-[18pt]">ผู้รับรองข้อมูล</p>
+                      <p className="mb-8 font-bold text-[18pt]">ผู้รับรองข้อมูล</p>
                       <p className="whitespace-nowrap">( ........................................... )</p>
-                      <p className="mt-2 whitespace-nowrap">ตำแหน่ง หัวหน้ากลุ่มงานการพยาบาล</p>
-                      <p className="mt-2">วันที่ ......../......../..........</p>
+                      <p className="mt-1 whitespace-nowrap">ตำแหน่ง หัวหน้ากลุ่มงานการพยาบาล</p>
+                      <p className="mt-1">วันที่ ......../......../..........</p>
                     </div>
                 </div>
               </div>
@@ -992,7 +1013,7 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
         }
 
         // ==========================================
-        // คอมโพเนนต์สำหรับ พิมพ์รายบุคคล
+        // คอมโพเนนต์สำหรับ พิมพ์รายบุคคล (บังคับลง 1-2 หน้า)
         // ==========================================
         function PrintableView({ data, onBack }) {
           useEffect(() => {
@@ -1002,7 +1023,7 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
           if (!data) return <div className="text-center p-10">ไม่พบข้อมูล กรุณากลับไปเลือกจากแดชบอร์ด</div>;
 
           return (
-            <div className="max-w-[210mm] mx-auto bg-white min-h-[297mm] shadow-xl mb-10">
+            <div className="max-w-[210mm] mx-auto bg-white shadow-xl mb-10 print:shadow-none print:m-0">
               <div className="bg-slate-800 text-white p-4 flex justify-between items-center print:hidden rounded-t-lg">
                 <button onClick={onBack} className="flex items-center gap-2 hover:text-blue-300 transition-colors">
                   <ChevronLeft className="w-5 h-5" /> กลับไปแดชบอร์ด
@@ -1012,9 +1033,9 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
                 </button>
               </div>
 
-              {/* บังคับฟอนต์ TH Sarabun PSK และขนาดข้อความปกติที่ 16pt */}
-              <div className="p-12 text-black bg-white font-['TH_Sarabun_PSK','Sarabun',sans-serif] text-[16pt] leading-[1.3]">
-                <div className="text-center mb-6">
+              {/* บังคับฟอนต์ TH Sarabun PSK และขนาดข้อความปกติที่ 16pt ปรับลด padding เพื่อให้ชิดกรอบพอดี 1-2 หน้า */}
+              <div className="p-8 print:p-0 text-black bg-white font-['TH_Sarabun_PSK','Sarabun',sans-serif] text-[16pt] leading-[1.3]">
+                <div className="text-center mb-4">
                   <h1 className="text-[18pt] font-bold mb-1">ใบสรุปผลการประเมินประสิทธิภาพการปฏิบัติงาน</h1>
                   <h2 className="text-[18pt] font-normal">งานอุบัติเหตุฉุกเฉินและนิติเวช</h2>
                   <h2 className="text-[18pt] font-normal">โรงพยาบาลเสลภูมิ</h2>
@@ -1022,8 +1043,8 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
                 </div>
 
                 <div className="mb-4">
-                  <h3 className="text-[18pt] font-bold mb-2">ส่วนที่ ๑ ข้อมูลของผู้รับการประเมิน</h3>
-                  <div className="grid grid-cols-2 gap-y-2 gap-x-6 pl-4">
+                  <h3 className="text-[18pt] font-bold mb-1">ส่วนที่ ๑ ข้อมูลของผู้รับการประเมิน</h3>
+                  <div className="grid grid-cols-2 gap-y-1 gap-x-6 pl-4">
                     <div className="col-span-2">
                       <span className="font-bold">ชื่อผู้เข้ารับการประเมิน: </span> {data.employeeName || data.name}
                     </div>
@@ -1039,99 +1060,101 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
                   </div>
                 </div>
 
-                <div className="mb-6 mt-6">
-                  <h3 className="text-[18pt] font-bold mb-2">ส่วนที่ ๔ การสรุปผลการประเมินทั้งปี</h3>
-                  <table className="w-full border-collapse border border-black mt-2">
+                {/* ส่วนที่ 4 ถูกตั้งค่า break-inside-avoid */}
+                <div className="mb-4 mt-4 break-inside-avoid">
+                  <h3 className="text-[18pt] font-bold mb-1">ส่วนที่ ๔ การสรุปผลการประเมินทั้งปี</h3>
+                  <table className="w-full border-collapse border border-black mt-1">
                     <thead>
                       <tr className="bg-gray-100 text-center font-bold">
-                        <th className="border border-black p-2">องค์ประกอบการประเมิน</th>
-                        <th className="border border-black p-2 w-32">คะแนนเฉลี่ย (ก)</th>
-                        <th className="border border-black p-2 w-32">น้ำหนัก (ข) %</th>
-                        <th className="border border-black p-2 w-40">รวมคะแนน (ก)X(ข)</th>
+                        <th className="border border-black p-1">องค์ประกอบการประเมิน</th>
+                        <th className="border border-black p-1 w-32">คะแนนเฉลี่ย (ก)</th>
+                        <th className="border border-black p-1 w-32">น้ำหนัก (ข) %</th>
+                        <th className="border border-black p-1 w-40">รวมคะแนน (ก)X(ข)</th>
                       </tr>
                     </thead>
                     <tbody>
                       <tr>
-                        <td className="border border-black p-2 pl-4">ผลการประเมินด้านผลสัมฤทธิ์ของงาน</td>
-                        <td className="border border-black p-2 text-center">{data.kpiScoreFinal ? data.kpiScoreFinal.toFixed(2) : '-'}</td>
-                        <td className="border border-black p-2 text-center">70</td>
-                        <td className="border border-black p-2 text-center font-bold">
+                        <td className="border border-black p-1 pl-4">ผลการประเมินด้านผลสัมฤทธิ์ของงาน</td>
+                        <td className="border border-black p-1 text-center">{data.kpiScoreFinal ? data.kpiScoreFinal.toFixed(2) : '-'}</td>
+                        <td className="border border-black p-1 text-center">70</td>
+                        <td className="border border-black p-1 text-center font-bold">
                           {data.kpiScoreFinal ? (data.kpiScoreFinal * 0.7).toFixed(2) : '-'}
                         </td>
                       </tr>
                       <tr>
-                        <td className="border border-black p-2 pl-4">ผลการประเมินด้านพฤติกรรมการปฏิบัติงาน</td>
-                        <td className="border border-black p-2 text-center">{data.behaviorScoreFinal ? data.behaviorScoreFinal.toFixed(2) : '-'}</td>
-                        <td className="border border-black p-2 text-center">30</td>
-                        <td className="border border-black p-2 text-center font-bold">
+                        <td className="border border-black p-1 pl-4">ผลการประเมินด้านพฤติกรรมการปฏิบัติงาน</td>
+                        <td className="border border-black p-1 text-center">{data.behaviorScoreFinal ? data.behaviorScoreFinal.toFixed(2) : '-'}</td>
+                        <td className="border border-black p-1 text-center">30</td>
+                        <td className="border border-black p-1 text-center font-bold">
                           {data.behaviorScoreFinal ? (data.behaviorScoreFinal * 0.3).toFixed(2) : '-'}
                         </td>
                       </tr>
                       <tr className="bg-gray-100 font-bold">
-                        <td colSpan={2} className="border border-black p-2 text-right pr-4">รวมคะแนนสุทธิ</td>
-                        <td className="border border-black p-2 text-center">100</td>
-                        <td className="border border-black p-2 text-center text-[18pt]">{data.totalScore ? data.totalScore.toFixed(2) : '-'}</td>
+                        <td colSpan={2} className="border border-black p-1 text-right pr-4">รวมคะแนนสุทธิ</td>
+                        <td className="border border-black p-1 text-center">100</td>
+                        <td className="border border-black p-1 text-center text-[18pt]">{data.totalScore ? data.totalScore.toFixed(2) : '-'}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
 
-                <div className="mb-6 border border-black p-3 text-center bg-gray-50">
-                  <p className="font-bold mb-2">ระดับผลการประเมิน</p>
-                  <div className="flex justify-between items-center px-4">
+                <div className="mb-4 border border-black p-2 text-center bg-gray-50 break-inside-avoid">
+                  <p className="font-bold mb-1">ระดับผลการประเมิน</p>
+                  <div className="flex justify-between items-center px-2 text-[15pt]">
                     <span className={data.grade === 'ดีเด่น' ? 'font-bold underline' : ''}>[ {data.grade === 'ดีเด่น' ? '✓' : '  '} ] ดีเด่น (90-100%)</span>
                     <span className={data.grade === 'ดีมาก' ? 'font-bold underline' : ''}>[ {data.grade === 'ดีมาก' ? '✓' : '  '} ] ดีมาก (80-89%)</span>
                     <span className={data.grade === 'ดี' ? 'font-bold underline' : ''}>[ {data.grade === 'ดี' ? '✓' : '  '} ] ดี (70-79%)</span>
                     <span className={data.grade === 'พอใช้' ? 'font-bold underline' : ''}>[ {data.grade === 'พอใช้' ? '✓' : '  '} ] พอใช้ (60-69%)</span>
-                    <span className={data.grade === 'ต้องปรับปรุง' ? 'font-bold underline' : ''}>[ {data.grade === 'ต้องปรับปรุง' ? '✓' : '  '} ] ต้องปรับปรุง ({'<'}60%)</span>
+                    <span className={data.grade === 'ต้องปรับปรุง' ? 'font-bold underline' : ''}>[ {data.grade === 'ต้องปรับปรุง' ? '✓' : '  '} ] ปรับปรุง ({'<'}60%)</span>
                   </div>
                 </div>
 
-                <div className="mb-6">
+                <div className="mb-6 break-inside-avoid">
                   <p className="font-bold mb-1">ความคิดเห็นเพิ่มเติมของผู้ประเมิน</p>
                   <div className="w-full border-b border-dotted border-gray-400 min-h-[1.5rem] leading-6 italic">
                     {data.comments || "ไม่มีความคิดเห็นเพิ่มเติม"}
                   </div>
-                  <div className="w-full border-b border-dotted border-gray-400 mt-5"></div>
+                  <div className="w-full border-b border-dotted border-gray-400 mt-4"></div>
                 </div>
 
-                <div className="mt-8">
-                  <h3 className="text-[18pt] font-bold mb-6">ส่วนที่ ๕ การรับทราบผลการประเมิน</h3>
-                  <div className="grid grid-cols-2 gap-y-12 gap-x-8 px-4">
+                {/* ส่วนลายเซ็น ถูกป้องกันการตัดครึ่งเวลาพิมพ์ ถ้าที่ไม่พอมันจะปัดลงหน้า 2 ทันที */}
+                <div className="mt-6 break-inside-avoid">
+                  <h3 className="text-[18pt] font-bold mb-4">ส่วนที่ ๕ การรับทราบผลการประเมิน</h3>
+                  <div className="grid grid-cols-2 gap-y-8 gap-x-8 px-4">
                     {/* 1. ผู้รับการประเมิน */}
                     <div className="text-center">
-                      <p className="mb-10">ผู้รับการประเมินได้รับทราบผลการประเมินแล้ว</p>
-                      <div className="border-b border-dotted border-black w-3/4 mx-auto mb-2"></div>
+                      <p className="mb-8">ผู้รับการประเมินได้รับทราบผลการประเมินแล้ว</p>
+                      <div className="border-b border-dotted border-black w-3/4 mx-auto mb-1"></div>
                       <p>( {data.employeeName || data.name} )</p>
-                      <p className="mt-1">ตำแหน่ง {data.position}</p>
-                      <p className="mt-1">วันที่ ......../......../..........</p>
+                      <p className="">ตำแหน่ง {data.position}</p>
+                      <p className="">วันที่ ......../......../..........</p>
                     </div>
 
                     {/* 2. ผู้ประเมิน (ผู้บังคับบัญชาชั้นต้น) */}
                     <div className="text-center">
-                      <p className="mb-10">ผู้ประเมิน</p>
-                      <div className="border-b border-dotted border-black w-3/4 mx-auto mb-2"></div>
+                      <p className="mb-8">ผู้ประเมิน</p>
+                      <div className="border-b border-dotted border-black w-3/4 mx-auto mb-1"></div>
                       <p>( {data.evaluatorName || '...........................................'} )</p>
-                      <p className="mt-1">ตำแหน่ง ผู้บังคับบัญชาชั้นต้น</p>
-                      <p className="mt-1">วันที่ ......../......../..........</p>
+                      <p className="">ตำแหน่ง ผู้บังคับบัญชาชั้นต้น</p>
+                      <p className="">วันที่ ......../......../..........</p>
                     </div>
                     
                     {/* 3. หัวหน้ากลุ่มงาน */}
                     <div className="text-center">
-                      <p className="mb-10">เห็นชอบผลการประเมิน</p>
-                      <div className="border-b border-dotted border-black w-3/4 mx-auto mb-2"></div>
+                      <p className="mb-8">เห็นชอบผลการประเมิน</p>
+                      <div className="border-b border-dotted border-black w-3/4 mx-auto mb-1"></div>
                       <p>( ........................................... )</p>
-                      <p className="mt-1">ตำแหน่ง หัวหน้ากลุ่มงานการพยาบาล</p>
-                      <p className="mt-1">วันที่ ......../......../..........</p>
+                      <p className="">ตำแหน่ง หัวหน้ากลุ่มงานการพยาบาล</p>
+                      <p className="">วันที่ ......../......../..........</p>
                     </div>
 
                     {/* 4. ผู้อำนวยการโรงพยาบาล */}
                     <div className="text-center">
-                      <p className="mb-10">เห็นชอบผลการประเมิน</p>
-                      <div className="border-b border-dotted border-black w-3/4 mx-auto mb-2"></div>
+                      <p className="mb-8">เห็นชอบผลการประเมิน</p>
+                      <div className="border-b border-dotted border-black w-3/4 mx-auto mb-1"></div>
                       <p>( นายบุญมี โพธิ์สนาม )</p>
-                      <p className="mt-1">ตำแหน่ง ผู้อำนวยการโรงพยาบาลเสลภูมิ</p>
-                      <p className="mt-1">วันที่ ......../......../..........</p>
+                      <p className="">ตำแหน่ง ผู้อำนวยการโรงพยาบาลเสลภูมิ</p>
+                      <p className="">วันที่ ......../......../..........</p>
                     </div>
                   </div>
                 </div>
@@ -1149,4 +1172,3 @@ function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete
     </script>
 </body>
 </html>
-               
