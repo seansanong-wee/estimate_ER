@@ -516,7 +516,7 @@
                 }
 
                 body.modern-ui .data-panel table {
-                    min-width: 920px;
+                    min-width: 1180px;
                 }
 
                 body.modern-ui .eval-form .grid {
@@ -752,6 +752,31 @@
           { id: 5, name: 'การทำงานเป็นทีม', target: 5, weight: 20, selfScore: 0, managerScore: 0 },
         ];
 
+        const fiscalYearOptions = ['2568', '2569', '2570', '2571', '2572'];
+        const periodOptions = ['ครั้งที่ 1 (1 ต.ค. - 31 มี.ค.)', 'ครั้งที่ 2 (1 เม.ย. - 30 ก.ย.)'];
+
+        const getCurrentFiscalYear = () => {
+          const now = new Date();
+          const thaiYear = now.getFullYear() + 543 + (now.getMonth() >= 9 ? 1 : 0);
+          const yearText = String(thaiYear);
+          return fiscalYearOptions.includes(yearText) ? yearText : fiscalYearOptions[1];
+        };
+
+        const inferFiscalYearFromDate = (dateValue) => {
+          const date = dateValue ? new Date(dateValue) : new Date();
+          if (Number.isNaN(date.getTime())) return getCurrentFiscalYear();
+          const thaiFiscalYear = date.getFullYear() + 543 + (date.getMonth() >= 9 ? 1 : 0);
+          const yearText = String(thaiFiscalYear);
+          return fiscalYearOptions.includes(yearText) ? yearText : getCurrentFiscalYear();
+        };
+
+        const getEmployeeFiscalYear = (emp) => {
+          const year = String(emp?.fiscalYear || emp?.budgetYear || emp?.year || '').trim();
+          return fiscalYearOptions.includes(year) ? year : inferFiscalYearFromDate(emp?.date);
+        };
+
+        const getEmployeePeriod = (emp) => emp?.period || periodOptions[0];
+
         const checkManagerEvaluated = (emp) => {
           if (!emp) return false;
           const kpiDone = emp.kpiData ? emp.kpiData.some(k => k.managerScore > 0) : false;
@@ -792,6 +817,7 @@
           const [currentView, setCurrentView] = useState('dashboard');
           const [employees, setEmployees] = useState([]); 
           const [currentEval, setCurrentEval] = useState(null);
+          const [printFilters, setPrintFilters] = useState({ fiscalYear: 'all', period: 'all' });
           const [toastMessage, setToastMessage] = useState('');
           const [itemToDelete, setItemToDelete] = useState(null);
           const [isLoadingData, setIsLoadingData] = useState(true);
@@ -804,7 +830,12 @@
                   const response = await fetch(GOOGLE_SHEET_WEBAPP_URL);
                   const data = await response.json();
                   if (Array.isArray(data)) {
-                    setEmployees(data.reverse()); // ใช้ข้อมูลล่าสุดเป็นฐาน หน้า admin/ใบพิมพ์รวมจะเรียงตามคะแนนตอนแสดงผล
+                    const normalizedData = data.map(emp => ({
+                      ...emp,
+                      fiscalYear: getEmployeeFiscalYear(emp),
+                      period: getEmployeePeriod(emp)
+                    }));
+                    setEmployees(normalizedData.reverse()); // ใช้ข้อมูลล่าสุดเป็นฐาน หน้า admin/ใบพิมพ์รวมจะเรียงตามคะแนนตอนแสดงผล
                   }
                 } catch (error) {
                   console.error("Fetch Error:", error);
@@ -858,6 +889,8 @@
               ...evalData,
               id: evalData.id || Date.now(),
               name: evalData.employeeName || "ไม่ระบุชื่อ",
+              fiscalYear: getEmployeeFiscalYear(evalData),
+              period: getEmployeePeriod(evalData),
               date: evalData.date || new Date().toISOString().split('T')[0]
             };
             
@@ -998,7 +1031,7 @@
                       onNew={() => { setCurrentEval(null); setCurrentView('form'); }} 
                       onEdit={(emp) => { setCurrentEval(emp); setCurrentView('form'); }}
                       onPrint={(emp) => { setCurrentEval(emp); setCurrentView('print'); }} 
-                      onPrintAll={() => setCurrentView('printAll')}
+                      onPrintAll={(filters) => { setPrintFilters(filters || { fiscalYear: 'all', period: 'all' }); setCurrentView('printAll'); }}
                       onDelete={(emp) => setItemToDelete(emp)}
                     />
                   )}
@@ -1015,7 +1048,7 @@
                   
                   {currentView === 'print' && <PrintableView data={currentEval} onBack={() => setCurrentView('dashboard')} />}
 
-                  {currentView === 'printAll' && <PrintAllView employees={employees} onBack={() => setCurrentView('dashboard')} />}
+                  {currentView === 'printAll' && <PrintAllView employees={employees} filters={printFilters} onBack={() => setCurrentView('dashboard')} />}
                 </div>
               </main>
             </div>
@@ -1082,8 +1115,16 @@
         function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete, onPrintAll }) {
           const [filter, setFilter] = useState('all');
           const [searchTerm, setSearchTerm] = useState('');
+          const [fiscalYearFilter, setFiscalYearFilter] = useState('all');
+          const [periodFilter, setPeriodFilter] = useState('all');
 
-          const filteredEmployees = sortEmployeesByScoreDesc(employees.filter(emp => {
+          const scopedEmployees = employees.filter(emp => {
+            const matchFiscalYear = fiscalYearFilter === 'all' || getEmployeeFiscalYear(emp) === fiscalYearFilter;
+            const matchPeriod = periodFilter === 'all' || getEmployeePeriod(emp) === periodFilter;
+            return matchFiscalYear && matchPeriod;
+          });
+
+          const filteredEmployees = sortEmployeesByScoreDesc(scopedEmployees.filter(emp => {
             const matchSearch = (emp.name || emp.employeeName || '').toLowerCase().includes(searchTerm.toLowerCase());
             if (!matchSearch) return false;
             
@@ -1094,10 +1135,11 @@
             return true;
           }));
 
-          const evaluatedEmployees = employees.filter(e => checkManagerEvaluated(e));
+          const evaluatedEmployees = scopedEmployees.filter(e => checkManagerEvaluated(e));
           const avgScore = evaluatedEmployees.length > 0 
             ? (evaluatedEmployees.reduce((sum, e) => sum + Number(e.totalScore || 0), 0) / evaluatedEmployees.length).toFixed(2)
             : "0.00";
+          const selectedPrintFilters = { fiscalYear: fiscalYearFilter, period: periodFilter };
 
           return (
             <div className="dashboard-view space-y-6 max-w-6xl mx-auto">
@@ -1106,7 +1148,7 @@
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <StatCard 
                     title="บุคลากรทั้งหมด" 
-                    value={employees.length.toString()} 
+                    value={scopedEmployees.length.toString()} 
                     icon={<Users className="w-8 h-8 text-blue-500" />} 
                     onClick={() => setFilter('all')}
                     active={filter === 'all'}
@@ -1120,7 +1162,7 @@
                   />
                   <StatCard 
                     title="รอหัวหน้าประเมิน" 
-                    value={employees.filter(e => !checkManagerEvaluated(e)).length.toString()} 
+                    value={scopedEmployees.filter(e => !checkManagerEvaluated(e)).length.toString()} 
                     icon={<BarChart3 className="w-8 h-8 text-orange-500" />} 
                     onClick={() => setFilter('pending')}
                     active={filter === 'pending'}
@@ -1135,25 +1177,43 @@
 
               <div className="dashboard-toolbar flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-wrap gap-4">
                 <div className="min-w-0">
-                  <div className="relative">
-                    <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
-                    <input 
-                      type="text" 
-                      placeholder="ค้นหารายชื่อ..." 
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64" 
-                    />
+                  <div className="flex flex-wrap gap-3">
+                    <div className="relative">
+                      <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
+                      <input 
+                        type="text" 
+                        placeholder="ค้นหารายชื่อ..." 
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64" 
+                      />
+                    </div>
+                    <select
+                      value={fiscalYearFilter}
+                      onChange={(e) => setFiscalYearFilter(e.target.value)}
+                      className="px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-40"
+                    >
+                      <option value="all">ทุกปีงบประมาณ</option>
+                      {fiscalYearOptions.map(year => <option key={year} value={year}>ปีงบประมาณ {year}</option>)}
+                    </select>
+                    <select
+                      value={periodFilter}
+                      onChange={(e) => setPeriodFilter(e.target.value)}
+                      className="px-3 py-2 border rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 min-w-56"
+                    >
+                      <option value="all">ทุกรอบการประเมิน</option>
+                      {periodOptions.map(period => <option key={period} value={period}>{period}</option>)}
+                    </select>
                   </div>
                   {isLoggedIn && (
                     <p className="text-xs text-slate-500 mt-2">
-                      เรียงตามคะแนนรวมจากมากสุดไปน้อยสุด และแสดงรายการรอประเมินไว้ท้ายตาราง
+                      กรองข้อมูลตามปีงบประมาณและรอบการประเมิน พร้อมเรียงคะแนนรวมจากมากสุดไปน้อยสุด
                     </p>
                   )}
                 </div>
                 <div className="flex gap-3">
                   {isLoggedIn && (
-                    <button onClick={onPrintAll} className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors shadow-sm">
+                    <button onClick={() => onPrintAll(selectedPrintFilters)} className="bg-slate-800 hover:bg-slate-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 font-medium transition-colors shadow-sm">
                       <Printer className="w-5 h-5" /> พิมพ์สรุปผลรวม
                     </button>
                   )}
@@ -1164,13 +1224,15 @@
               </div>
 
               <div className="data-panel bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <table className="w-full min-w-[960px] text-left">
+                <table className="w-full min-w-[1180px] text-left">
                   <thead className="bg-slate-50 text-slate-700 border-b">
                     <tr>
                       {isLoggedIn && <th className="p-4 font-medium text-center w-24">อันดับ</th>}
                       <th className="p-4 font-medium">ชื่อ-นามสกุล</th>
                       <th className="p-4 font-medium">ตำแหน่ง</th>
                       <th className="p-4 font-medium">แผนก/กลุ่มงาน</th>
+                      <th className="p-4 font-medium text-center">ปีงบประมาณ</th>
+                      <th className="p-4 font-medium">รอบการประเมิน</th>
                       <th className="p-4 font-medium">วันที่ประเมิน</th>
                       {isLoggedIn && (
                         <>
@@ -1200,6 +1262,8 @@
                           <td className="p-4 font-bold text-gray-800">{getEmployeeName(emp)}</td>
                           <td className="p-4 text-gray-600">{emp.position || ''}</td>
                           <td className="p-4 text-gray-600">{emp.department || ''}</td>
+                          <td className="p-4 text-center font-medium text-blue-700">{getEmployeeFiscalYear(emp)}</td>
+                          <td className="p-4 text-gray-600">{getEmployeePeriod(emp)}</td>
                           <td className="p-4 text-gray-600">{emp.date || ''}</td>
                           
                           {isLoggedIn && (
@@ -1242,7 +1306,7 @@
                     })}
                     {filteredEmployees.length === 0 && (
                       <tr>
-                        <td colSpan={isLoggedIn ? 8 : 4} className="p-8 text-center text-gray-500">
+                        <td colSpan={isLoggedIn ? 10 : 6} className="p-8 text-center text-gray-500">
                           ไม่พบข้อมูลการประเมิน
                         </td>
                       </tr>
@@ -1270,13 +1334,17 @@
         }
 
         function EvaluationForm({ isLoggedIn, initialData, employees, onSubmit, onCancel }) {
-          const [formData, setFormData] = useState(initialData || {
+          const [formData, setFormData] = useState({
             employeeName: '',
             position: 'พยาบาลวิชาชีพ',
             department: 'งานอุบัติเหตุฉุกเฉินและนิติเวช/กลุ่มการพยาบาล',
+            fiscalYear: getCurrentFiscalYear(),
             period: 'ครั้งที่ 1 (1 ต.ค. - 31 มี.ค.)',
             evaluatorName: '',
-            comments: ''
+            comments: '',
+            ...(initialData || {}),
+            fiscalYear: initialData ? getEmployeeFiscalYear(initialData) : getCurrentFiscalYear(),
+            period: initialData ? getEmployeePeriod(initialData) : periodOptions[0]
           });
 
           const [kpiScores, setKpiScores] = useState(initialData?.kpiData || defaultKpi);
@@ -1314,9 +1382,14 @@
             }
             
             if (!initialData) {
-              const isDuplicate = employees.some(emp => emp.name === formData.employeeName || emp.employeeName === formData.employeeName);
+              const isDuplicate = employees.some(emp => {
+                const sameName = emp.name === formData.employeeName || emp.employeeName === formData.employeeName;
+                const sameFiscalYear = getEmployeeFiscalYear(emp) === String(formData.fiscalYear || getCurrentFiscalYear());
+                const samePeriod = getEmployeePeriod(emp) === (formData.period || periodOptions[0]);
+                return sameName && sameFiscalYear && samePeriod;
+              });
               if (isDuplicate) {
-                alert("บุคคลนี้มีแบบประเมินในระบบแล้ว! กรุณากลับไปที่หน้าแรกแล้วกดปุ่ม 'แก้ไข' ที่รายชื่อนั้นแทน");
+                alert("บุคคลนี้มีแบบประเมินในปีงบประมาณและรอบนี้แล้ว! กรุณากลับไปที่หน้าแรกแล้วกดปุ่ม 'แก้ไข' ที่รายชื่อนั้นแทน");
                 return;
               }
             }
@@ -1392,10 +1465,15 @@
                       <input type="text" value={formData.department || ''} onChange={e => setFormData({...formData, department: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 bg-gray-50 focus:ring-blue-500 focus:border-blue-500" />
                     </div>
                     <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">ปีงบประมาณ</label>
+                      <select value={formData.fiscalYear || getCurrentFiscalYear()} onChange={e => setFormData({...formData, fiscalYear: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 bg-gray-50 focus:ring-blue-500 focus:border-blue-500">
+                        {fiscalYearOptions.map(year => <option key={year} value={year}>ปีงบประมาณ {year}</option>)}
+                      </select>
+                    </div>
+                    <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">รอบการประเมิน</label>
                       <select value={formData.period || ''} onChange={e => setFormData({...formData, period: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 bg-gray-50 focus:ring-blue-500 focus:border-blue-500">
-                        <option>ครั้งที่ 1 (1 ต.ค. - 31 มี.ค.)</option>
-                        <option>ครั้งที่ 2 (1 เม.ย. - 30 ก.ย.)</option>
+                        {periodOptions.map(period => <option key={period} value={period}>{period}</option>)}
                       </select>
                     </div>
                   </div>
@@ -1621,16 +1699,24 @@
         // ==========================================
         // คอมโพเนนต์สำหรับ พิมพ์ใบรวมทุกรายชื่อ (ลื่นไหลตามจำนวนคน)
         // ==========================================
-        function PrintAllView({ employees, onBack }) {
+        function PrintAllView({ employees, filters, onBack }) {
           useEffect(() => {
             window.scrollTo(0, 0);
           }, []);
 
-          const sortedEmployees = sortEmployeesByScoreDesc(employees);
+          const activeFilters = filters || { fiscalYear: 'all', period: 'all' };
+          const filteredForPrint = employees.filter(emp => {
+            const matchFiscalYear = activeFilters.fiscalYear === 'all' || getEmployeeFiscalYear(emp) === activeFilters.fiscalYear;
+            const matchPeriod = activeFilters.period === 'all' || getEmployeePeriod(emp) === activeFilters.period;
+            return matchFiscalYear && matchPeriod;
+          });
+          const sortedEmployees = sortEmployeesByScoreDesc(filteredForPrint);
           const evaluatedEmployees = sortedEmployees.filter(emp => checkManagerEvaluated(emp));
           const avgScore = evaluatedEmployees.length > 0
             ? evaluatedEmployees.reduce((sum, emp) => sum + getEmployeeScore(emp), 0) / evaluatedEmployees.length
             : 0;
+          const fiscalYearLabel = activeFilters.fiscalYear === 'all' ? 'ทุกปีงบประมาณ' : `ปีงบประมาณ ${activeFilters.fiscalYear}`;
+          const periodLabel = activeFilters.period === 'all' ? 'ทุกรอบการประเมิน' : activeFilters.period;
 
           return (
             <div className="max-w-[210mm] mx-auto bg-white shadow-xl mb-10 print:shadow-none print:m-0">
@@ -1651,12 +1737,13 @@
                   <h2 className="text-[18pt] font-normal">โรงพยาบาลเสลภูมิ</h2>
                   <h2 className="text-[18pt] font-normal">สังกัดสำนักงานปลัดกระทรวงสาธารณสุข</h2>
                   <p className="text-[14pt] mt-2">เรียงตามคะแนนรวมจากมากสุดไปน้อยสุด</p>
+                  <p className="text-[14pt] mt-1">{fiscalYearLabel} / {periodLabel}</p>
                 </div>
 
                 <div className="report-summary grid grid-cols-3 gap-3 mb-4 text-center">
                   <div className="border border-black p-2">
                     <p className="font-bold">บุคลากรทั้งหมด</p>
-                    <p>{employees.length} ราย</p>
+                    <p>{sortedEmployees.length} ราย</p>
                   </div>
                   <div className="border border-black p-2">
                     <p className="font-bold">ประเมินครบแล้ว</p>
@@ -1675,7 +1762,8 @@
                       <th className="border border-black p-2 w-20">ลำดับคะแนน</th>
                       <th className="border border-black p-2">ชื่อ-สกุล</th>
                       <th className="border border-black p-2">ตำแหน่ง</th>
-                      <th className="border border-black p-2">งาน/กลุ่มงาน</th>
+                      <th className="border border-black p-2 w-24">ปีงบฯ</th>
+                      <th className="border border-black p-2 w-40">รอบ</th>
                       <th className="border border-black p-2 w-32">ผลคะแนนรวม</th>
                       <th className="border border-black p-2 w-32">ระดับ/สถานะ</th>
                     </tr>
@@ -1705,7 +1793,8 @@
                           <td className="border border-black p-2 text-center font-bold">{isEvaluated ? index + 1 : '-'}</td>
                           <td className="border border-black p-2">{getEmployeeName(emp)}</td>
                           <td className="border border-black p-2">{emp.position || '-'}</td>
-                          <td className="border border-black p-2">{emp.department || '-'}</td>
+                          <td className="border border-black p-2 text-center">{getEmployeeFiscalYear(emp)}</td>
+                          <td className="border border-black p-2">{getEmployeePeriod(emp)}</td>
                           <td className="border border-black p-2 text-center font-bold">{isEvaluated ? formatScore(score) : '-'}</td>
                           <td className={`border border-black p-2 text-center font-bold ${resultClass}`}>
                             {resultText}
@@ -1715,7 +1804,7 @@
                     })}
                     {sortedEmployees.length === 0 && (
                       <tr>
-                        <td colSpan="6" className="border border-black p-6 text-center text-gray-500">
+                        <td colSpan="7" className="border border-black p-6 text-center text-gray-500">
                           ยังไม่มีข้อมูลผู้รับการประเมินในระบบ
                         </td>
                       </tr>
@@ -1785,7 +1874,10 @@
                     <div>
                       <span className="font-bold">งาน/กลุ่มงาน: </span> {data.department}
                     </div>
-                    <div className="col-span-2">
+                    <div>
+                      <span className="font-bold">ปีงบประมาณ: </span> {getEmployeeFiscalYear(data)}
+                    </div>
+                    <div>
                       <span className="font-bold">รอบการประเมิน: </span> {data.period || 'ครั้งที่ 1 (1 ต.ค. - 31 มี.ค.)'}
                     </div>
                   </div>
