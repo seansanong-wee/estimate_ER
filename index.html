@@ -10,7 +10,7 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js" crossorigin></script>
     
     <!-- นำเข้า Babel สำหรับแปลงโค้ด JSX ให้ทำงานบนเบราว์เซอร์ -->
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
     
     <!-- นำเข้า Tailwind CSS สำหรับความสวยงาม -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -20,7 +20,7 @@
         @media print {
             .print\:hidden { display: none !important; }
             body { background: white; margin: 0; padding: 0; }
-            @page { size: A4; margin: 15mm; } /* ตั้งระยะขอบกระดาษ A4 */
+            @page { size: A4; margin: 8mm; } /* ตั้งระยะขอบกระดาษ A4 ให้กระชับเพื่อไม่เกิน 2 แผ่น */
             
             /* ลบเงาและปรับขนาดกล่องให้เต็ม 100% ในหน้าพิมพ์ */
             .max-w-\[210mm\] { 
@@ -46,9 +46,565 @@
         @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
         /* กำหนดฟอนต์หลักเป็น TH Sarabun PSK ตามหลักสารบรรณ */
         body { font-family: 'TH Sarabun PSK', 'Sarabun', sans-serif; }
+
+        :root {
+            --ui-bg: #f5f8fb;
+            --ui-ink: #17202a;
+            --ui-muted: #64748b;
+            --ui-line: rgba(117, 132, 151, 0.2);
+            --ui-surface: rgba(255, 255, 255, 0.86);
+            --ui-blue: #2563eb;
+            --ui-cyan: #06b6d4;
+            --ui-emerald: #10b981;
+            --ui-amber: #f59e0b;
+            --ui-red: #ef4444;
+            --ui-charcoal: #141718;
+        }
+
+        @media screen {
+            body.modern-ui {
+                background:
+                    linear-gradient(135deg, rgba(255,255,255,0.98), rgba(238,247,255,0.9) 48%, rgba(240,255,250,0.86)),
+                    var(--ui-bg);
+                color: var(--ui-ink);
+                letter-spacing: 0;
+            }
+
+            body.modern-ui::before {
+                content: "";
+                position: fixed;
+                inset: 0;
+                pointer-events: none;
+                z-index: 0;
+                background-image:
+                    linear-gradient(to right, rgba(37,99,235,0.07) 1px, transparent 1px),
+                    linear-gradient(to bottom, rgba(16,185,129,0.06) 1px, transparent 1px);
+                background-size: 32px 32px;
+                mask-image: linear-gradient(to bottom, rgba(0,0,0,0.65), rgba(0,0,0,0.18));
+            }
+
+            body.modern-ui #root {
+                position: relative;
+                z-index: 1;
+                min-height: 100vh;
+            }
+
+            body.modern-ui .app-shell {
+                background: transparent !important;
+                color: var(--ui-ink) !important;
+            }
+
+            body.modern-ui .admin-sidebar {
+                background:
+                    linear-gradient(180deg, rgba(20,23,24,0.98), rgba(23,32,30,0.98)) !important;
+                border-right: 1px solid rgba(6,182,212,0.28);
+                box-shadow: inset -1px 0 0 rgba(255,255,255,0.04), 18px 0 45px rgba(15,23,42,0.08);
+            }
+
+            body.modern-ui .admin-sidebar h1 {
+                color: #67e8f9 !important;
+            }
+
+            body.modern-ui .admin-sidebar p,
+            body.modern-ui .admin-sidebar .text-slate-400 {
+                color: #9fb6ba !important;
+            }
+
+            body.modern-ui .app-header {
+                background: rgba(255,255,255,0.84) !important;
+                border-bottom: 1px solid var(--ui-line);
+                box-shadow: 0 12px 36px rgba(15,23,42,0.07) !important;
+                backdrop-filter: blur(18px) saturate(1.25);
+            }
+
+            body.modern-ui .app-header h2 {
+                color: #16202b !important;
+                font-weight: 800 !important;
+            }
+
+            body.modern-ui .app-header svg {
+                color: var(--ui-cyan) !important;
+            }
+
+            body.modern-ui .app-content {
+                background: transparent !important;
+                padding: 28px !important;
+            }
+
+            body.modern-ui .dashboard-view,
+            body.modern-ui .eval-form {
+                max-width: 1220px !important;
+            }
+
+            body.modern-ui .dashboard-toolbar,
+            body.modern-ui .data-panel,
+            body.modern-ui .stat-card,
+            body.modern-ui .login-panel,
+            body.modern-ui .eval-form,
+            body.modern-ui .danger-modal {
+                background: var(--ui-surface) !important;
+                border: 1px solid var(--ui-line) !important;
+                border-radius: 8px !important;
+                box-shadow: 0 18px 50px rgba(15,23,42,0.08) !important;
+                backdrop-filter: blur(18px) saturate(1.2);
+            }
+
+            body.modern-ui .stat-card {
+                position: relative;
+                overflow: hidden;
+                min-height: 104px;
+                transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+            }
+
+            body.modern-ui .stat-card::before {
+                content: "";
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 4px;
+                background: linear-gradient(180deg, var(--ui-cyan), var(--ui-emerald));
+            }
+
+            body.modern-ui .stat-card:hover {
+                transform: translateY(-3px);
+                border-color: rgba(6,182,212,0.38) !important;
+                box-shadow: 0 24px 55px rgba(15,23,42,0.12) !important;
+            }
+
+            body.modern-ui .stat-card .bg-slate-50 {
+                background: rgba(6,182,212,0.09) !important;
+                border: 1px solid rgba(6,182,212,0.18);
+                border-radius: 8px !important;
+            }
+
+            body.modern-ui .stat-card p:first-child {
+                color: var(--ui-muted) !important;
+            }
+
+            body.modern-ui .stat-card p:last-child {
+                color: var(--ui-ink) !important;
+            }
+
+            body.modern-ui .ring-blue-100 {
+                --tw-ring-color: rgba(6,182,212,0.2) !important;
+            }
+
+            body.modern-ui .border-blue-500 {
+                border-color: rgba(6,182,212,0.55) !important;
+            }
+
+            body.modern-ui button,
+            body.modern-ui input,
+            body.modern-ui select,
+            body.modern-ui textarea {
+                border-radius: 8px !important;
+            }
+
+            body.modern-ui input,
+            body.modern-ui select,
+            body.modern-ui textarea {
+                background: rgba(255,255,255,0.9) !important;
+                border-color: rgba(117,132,151,0.28) !important;
+                color: var(--ui-ink) !important;
+                outline: none;
+                transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+            }
+
+            body.modern-ui input:focus,
+            body.modern-ui select:focus,
+            body.modern-ui textarea:focus {
+                border-color: rgba(6,182,212,0.7) !important;
+                box-shadow: 0 0 0 4px rgba(6,182,212,0.12) !important;
+                background: #ffffff !important;
+            }
+
+            body.modern-ui button.bg-blue-600,
+            body.modern-ui .bg-blue-600 {
+                background: linear-gradient(135deg, var(--ui-blue), var(--ui-cyan)) !important;
+                color: #ffffff !important;
+                border: 1px solid rgba(255,255,255,0.18) !important;
+                box-shadow: 0 12px 26px rgba(37,99,235,0.22) !important;
+            }
+
+            body.modern-ui button.bg-slate-800,
+            body.modern-ui .bg-slate-800 {
+                background: linear-gradient(135deg, #1f2933, #123734) !important;
+                color: #ffffff !important;
+            }
+
+            body.modern-ui button.bg-green-600,
+            body.modern-ui .bg-green-600 {
+                background: linear-gradient(135deg, #059669, var(--ui-emerald)) !important;
+                color: #ffffff !important;
+            }
+
+            body.modern-ui button.bg-red-600,
+            body.modern-ui .bg-red-600 {
+                background: linear-gradient(135deg, #dc2626, var(--ui-red)) !important;
+                color: #ffffff !important;
+            }
+
+            body.modern-ui button:hover {
+                filter: saturate(1.06) brightness(1.02);
+            }
+
+            body.modern-ui .dashboard-toolbar {
+                padding: 16px !important;
+            }
+
+            body.modern-ui .data-panel {
+                overflow-x: auto;
+                overflow-y: hidden;
+            }
+
+            body.modern-ui table {
+                border-color: rgba(117,132,151,0.18) !important;
+            }
+
+            body.modern-ui .data-panel thead,
+            body.modern-ui .eval-form thead {
+                background: linear-gradient(180deg, rgba(240,249,255,0.96), rgba(248,250,252,0.96)) !important;
+                color: #263443 !important;
+            }
+
+            body.modern-ui .data-panel th,
+            body.modern-ui .eval-form th {
+                font-weight: 800 !important;
+            }
+
+            body.modern-ui .data-panel tr,
+            body.modern-ui .eval-form tbody tr {
+                transition: background 160ms ease;
+            }
+
+            body.modern-ui .data-panel tbody tr:hover,
+            body.modern-ui .eval-form tbody tr:hover {
+                background: rgba(236,253,245,0.72) !important;
+            }
+
+            body.modern-ui .data-panel td,
+            body.modern-ui .eval-form td {
+                border-color: rgba(117,132,151,0.16) !important;
+            }
+
+            body.modern-ui .login-panel {
+                padding: 40px !important;
+            }
+
+            body.modern-ui .login-panel > .flex > div,
+            body.modern-ui .login-panel .bg-blue-100 {
+                background: rgba(6,182,212,0.1) !important;
+                color: var(--ui-cyan) !important;
+                border: 1px solid rgba(6,182,212,0.18);
+            }
+
+            body.modern-ui .eval-form {
+                overflow: hidden;
+            }
+
+            body.modern-ui .form-hero {
+                background:
+                    linear-gradient(135deg, #1f2933, #0f766e 52%, #2563eb) !important;
+                border-bottom: 1px solid rgba(255,255,255,0.18);
+            }
+
+            body.modern-ui .eval-form section {
+                border: 1px solid rgba(117,132,151,0.16);
+                border-radius: 8px;
+                padding: 18px;
+                background: rgba(255,255,255,0.6);
+            }
+
+            body.modern-ui .eval-form h3 {
+                border-color: rgba(117,132,151,0.18) !important;
+            }
+
+            body.modern-ui .eval-form h3 span,
+            body.modern-ui .bg-blue-100 {
+                background: rgba(6,182,212,0.11) !important;
+                color: #0e7490 !important;
+                border: 1px solid rgba(6,182,212,0.18);
+                border-radius: 8px !important;
+            }
+
+            body.modern-ui .bg-blue-50,
+            body.modern-ui .bg-purple-50,
+            body.modern-ui .bg-yellow-50,
+            body.modern-ui .bg-green-50 {
+                background-color: rgba(240,249,255,0.72) !important;
+            }
+
+            body.modern-ui .text-purple-700 {
+                color: #0f766e !important;
+            }
+
+            body.modern-ui .text-blue-600,
+            body.modern-ui .text-blue-700 {
+                color: #0e7490 !important;
+            }
+
+            body.modern-ui .text-green-600,
+            body.modern-ui .text-green-700,
+            body.modern-ui .text-green-800 {
+                color: #047857 !important;
+            }
+
+            body.modern-ui .score-summary {
+                background: linear-gradient(135deg, rgba(236,253,245,0.88), rgba(240,249,255,0.88)) !important;
+                border-color: rgba(16,185,129,0.28) !important;
+                border-radius: 8px !important;
+            }
+
+            body.modern-ui .score-summary > .absolute {
+                display: none !important;
+            }
+
+            body.modern-ui .score-summary .bg-white {
+                border: 1px solid rgba(117,132,151,0.14);
+                border-radius: 8px !important;
+            }
+
+            body.modern-ui .self-note {
+                background: rgba(240,249,255,0.88) !important;
+                border-color: rgba(6,182,212,0.24) !important;
+                color: #0f3c4c !important;
+            }
+
+            body.modern-ui .app-toast {
+                background: linear-gradient(135deg, #059669, var(--ui-emerald)) !important;
+                border-radius: 8px !important;
+                box-shadow: 0 18px 42px rgba(16,185,129,0.22) !important;
+            }
+
+            body.modern-ui .danger-modal {
+                max-width: 440px !important;
+            }
+
+            @media (max-width: 640px) {
+                body.modern-ui .app-header {
+                    height: auto !important;
+                    min-height: 64px;
+                    align-items: flex-start !important;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                    padding: 12px 16px !important;
+                }
+
+                body.modern-ui .app-header > div:first-child,
+                body.modern-ui .app-header > div:last-child {
+                    width: 100%;
+                }
+
+                body.modern-ui .app-header h2 {
+                    font-size: 18px !important;
+                    line-height: 1.25 !important;
+                }
+
+                body.modern-ui .app-header button {
+                    width: 100%;
+                    justify-content: center;
+                }
+
+                body.modern-ui .app-content {
+                    padding: 16px !important;
+                }
+
+                body.modern-ui .dashboard-toolbar,
+                body.modern-ui .dashboard-toolbar > div:last-child {
+                    width: 100%;
+                    max-width: 100%;
+                    box-sizing: border-box;
+                }
+
+                body.modern-ui .dashboard-toolbar input,
+                body.modern-ui .dashboard-toolbar button {
+                    width: 100% !important;
+                    max-width: 100%;
+                    box-sizing: border-box;
+                }
+
+                body.modern-ui .dashboard-toolbar > div:first-child {
+                    width: 100%;
+                    max-width: 100%;
+                    min-width: 0;
+                }
+
+                body.modern-ui .dashboard-view,
+                body.modern-ui .data-panel {
+                    width: 100%;
+                    max-width: 100% !important;
+                    box-sizing: border-box;
+                }
+
+                body.modern-ui .data-panel table {
+                    min-width: 920px;
+                }
+
+                body.modern-ui .eval-form .grid {
+                    grid-template-columns: 1fr !important;
+                }
+            }
+        }
+
+        @media print {
+            body.modern-ui::before { display: none !important; }
+            body.modern-ui { background: white !important; }
+            body.modern-ui #root,
+            body.modern-ui .app-shell,
+            body.modern-ui main,
+            body.modern-ui .app-content {
+                display: block !important;
+                height: auto !important;
+                min-height: 0 !important;
+                overflow: visible !important;
+                padding: 0 !important;
+            }
+            * {
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            .print-report {
+                color: #111827 !important;
+                font-size: 14pt !important;
+                line-height: 1.28 !important;
+            }
+            .print-report .report-title {
+                border-bottom: 2px solid #111827;
+                padding-bottom: 8px;
+                margin-bottom: 12px;
+            }
+            .print-report .report-summary {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+            .print-report table {
+                font-size: 13.2pt !important;
+            }
+            .print-report th {
+                background: #eef2f7 !important;
+            }
+            .print-report th,
+            .print-report td {
+                padding: 5px 7px !important;
+                vertical-align: top;
+            }
+            .print-report .signature-block {
+                margin-top: 22px !important;
+            }
+            .print-fit-two-pages {
+                max-height: 560mm;
+                overflow: hidden !important;
+                page-break-after: avoid;
+                break-after: avoid-page;
+            }
+            .print-fit-two-pages h1,
+            .print-fit-two-pages h2,
+            .print-fit-two-pages h3,
+            .print-fit-two-pages p {
+                margin-top: 0 !important;
+            }
+            .print-fit-two-pages .report-title {
+                margin-bottom: 6px !important;
+                padding-bottom: 5px !important;
+            }
+            .print-fit-two-pages .report-title h1,
+            .print-fit-two-pages .report-title h2 {
+                font-size: 14pt !important;
+                line-height: 1.08 !important;
+            }
+            .print-fit-two-pages .report-title p {
+                font-size: 10.5pt !important;
+                margin-top: 2px !important;
+            }
+            .print-fit-two-pages .report-summary {
+                gap: 4px !important;
+                margin-bottom: 6px !important;
+                font-size: 10.5pt !important;
+                line-height: 1.1 !important;
+            }
+            .print-fit-two-pages .report-summary > div {
+                padding: 3px 5px !important;
+            }
+            .print-fit-two-pages table {
+                margin-top: 4px !important;
+                font-size: 10pt !important;
+                line-height: 1.1 !important;
+            }
+            .print-fit-two-pages th,
+            .print-fit-two-pages td {
+                padding: 2px 4px !important;
+            }
+            .print-fit-two-pages .signature-block {
+                display: grid !important;
+                grid-template-columns: 1fr 1fr !important;
+                gap: 10px 18px !important;
+                margin-top: 12px !important;
+                align-items: start !important;
+            }
+            .print-fit-two-pages .signature-block p {
+                font-size: 11pt !important;
+                line-height: 1.12 !important;
+                margin-bottom: 2px !important;
+                white-space: normal !important;
+            }
+            .print-fit-two-pages .signature-block .mb-8 {
+                margin-bottom: 16px !important;
+            }
+            .individual-print-report {
+                font-size: 13pt !important;
+                line-height: 1.12 !important;
+            }
+            .individual-print-report > div,
+            .individual-print-report .mb-4,
+            .individual-print-report .mb-6 {
+                margin-bottom: 7px !important;
+            }
+            .individual-print-report h1,
+            .individual-print-report h2,
+            .individual-print-report h3 {
+                font-size: 14pt !important;
+                line-height: 1.08 !important;
+                margin-bottom: 3px !important;
+            }
+            .individual-print-report table {
+                font-size: 11.5pt !important;
+                line-height: 1.1 !important;
+            }
+            .individual-print-report th,
+            .individual-print-report td {
+                padding: 2px 4px !important;
+            }
+            .individual-print-report .grade-line {
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                gap: 2px 10px !important;
+                font-size: 11.5pt !important;
+                line-height: 1.12 !important;
+            }
+            .individual-print-report .individual-signatures {
+                margin-top: 8px !important;
+            }
+            .individual-print-report .individual-signatures h3 {
+                margin-bottom: 6px !important;
+            }
+            .individual-print-report .individual-signatures .grid {
+                gap: 12px 18px !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+            }
+            .individual-print-report .individual-signatures p {
+                font-size: 11.5pt !important;
+                line-height: 1.12 !important;
+                margin-bottom: 2px !important;
+            }
+            .individual-print-report .individual-signatures .mb-8 {
+                margin-bottom: 18px !important;
+            }
+        }
     </style>
 </head>
-<body class="bg-gray-50">
+<body class="bg-gray-50 modern-ui">
     <!-- จุดที่ React จะนำ UI มาแสดงผล -->
     <div id="root"></div>
 
@@ -102,6 +658,31 @@
           return kpiDone || behaviorDone;
         };
 
+        const getEmployeeName = (emp) => emp?.name || emp?.employeeName || 'ไม่ระบุชื่อ';
+
+        const getEmployeeScore = (emp) => {
+          const score = Number(emp?.totalScore);
+          return Number.isFinite(score) ? score : 0;
+        };
+
+        const formatScore = (score) => Number(score || 0).toFixed(2);
+
+        const sortEmployeesByScoreDesc = (list) => [...list].sort((a, b) => {
+          const aDone = checkManagerEvaluated(a);
+          const bDone = checkManagerEvaluated(b);
+          if (aDone !== bDone) return aDone ? -1 : 1;
+
+          if (aDone && bDone) {
+            const scoreDiff = getEmployeeScore(b) - getEmployeeScore(a);
+            if (scoreDiff !== 0) return scoreDiff;
+          }
+
+          const dateDiff = new Date(b?.date || 0) - new Date(a?.date || 0);
+          if (Number.isFinite(dateDiff) && dateDiff !== 0) return dateDiff;
+
+          return getEmployeeName(a).localeCompare(getEmployeeName(b), 'th');
+        });
+
         // ==========================================
         // แอปพลิเคชันหลัก
         // ==========================================
@@ -122,7 +703,7 @@
                   const response = await fetch(GOOGLE_SHEET_WEBAPP_URL);
                   const data = await response.json();
                   if (Array.isArray(data)) {
-                    setEmployees(data.reverse()); // ให้คนล่าสุดอยู่ด้านบน
+                    setEmployees(data.reverse()); // ใช้ข้อมูลล่าสุดเป็นฐาน หน้า admin/ใบพิมพ์รวมจะเรียงตามคะแนนตอนแสดงผล
                   }
                 } catch (error) {
                   console.error("Fetch Error:", error);
@@ -216,7 +797,7 @@
           // ป้องกันหน้าจอกระพริบตอนกำลังโหลด
           if (isLoadingData) {
             return (
-              <div className="flex h-screen w-screen items-center justify-center bg-gray-50">
+              <div className="app-shell flex h-screen w-screen items-center justify-center bg-gray-50">
                 <div className="text-center">
                   <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
                   <h2 className="text-xl font-bold text-gray-700">กำลังโหลดข้อมูลจากฐานข้อมูล...</h2>
@@ -226,9 +807,9 @@
           }
 
           return (
-            <div className="flex h-screen bg-gray-50 text-gray-800 font-sans">
+            <div className="app-shell flex h-screen bg-gray-50 text-gray-800 font-sans">
               {isLoggedIn && (
-                <aside className="w-64 bg-slate-900 text-white flex flex-col hidden sm:flex print:hidden">
+                <aside className="admin-sidebar w-64 bg-slate-900 text-white flex flex-col hidden sm:flex print:hidden">
                   <div className="p-6">
                     <h1 className="text-xl font-bold flex items-center gap-2 text-blue-400">
                       <ShieldAlert className="w-6 h-6" /> ระบบจัดการ (Admin)
@@ -242,7 +823,7 @@
               )}
 
               <main className="flex-1 flex flex-col overflow-hidden relative">
-                <header className="bg-white shadow-sm h-16 flex items-center justify-between px-6 print:hidden z-10">
+                <header className="app-header bg-white shadow-sm h-16 flex items-center justify-between px-6 print:hidden z-10">
                   <div className="flex items-center gap-3">
                     {!isLoggedIn && <BarChart3 className="w-6 h-6 text-blue-600" />}
                     <h2 className="text-xl font-semibold text-gray-800">
@@ -267,9 +848,9 @@
                   </div>
                 </header>
 
-                <div className="flex-1 overflow-auto p-6 relative print:overflow-visible">
+                <div className="app-content flex-1 overflow-auto p-6 relative print:overflow-visible">
                   {toastMessage && (
-                    <div className="absolute top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-bounce print:hidden">
+                    <div className="app-toast absolute top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-bounce print:hidden">
                       <CheckCircle className="w-5 h-5" />
                       {toastMessage}
                     </div>
@@ -277,7 +858,7 @@
 
                   {itemToDelete && (
                     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 print:hidden">
-                      <div className="bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full border border-gray-100 animate-in fade-in zoom-in duration-200">
+                      <div className="danger-modal bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full border border-gray-100 animate-in fade-in zoom-in duration-200">
                         <div className="flex items-center gap-3 mb-4 text-red-600">
                           <div className="p-3 bg-red-50 rounded-full">
                             <Trash2 className="w-6 h-6" />
@@ -360,7 +941,7 @@
 
           return (
             <div className="flex justify-center items-center h-full">
-              <form onSubmit={handleSubmit} className="bg-white p-10 rounded-2xl shadow-md w-full max-w-md border border-gray-100">
+              <form onSubmit={handleSubmit} className="login-panel bg-white p-10 rounded-2xl shadow-md w-full max-w-md border border-gray-100">
                 <div className="flex justify-center mb-6">
                   <div className="bg-blue-100 p-4 rounded-full text-blue-600">
                     <Lock className="w-10 h-10" />
@@ -401,7 +982,7 @@
           const [filter, setFilter] = useState('all');
           const [searchTerm, setSearchTerm] = useState('');
 
-          const filteredEmployees = employees.filter(emp => {
+          const filteredEmployees = sortEmployeesByScoreDesc(employees.filter(emp => {
             const matchSearch = (emp.name || emp.employeeName || '').toLowerCase().includes(searchTerm.toLowerCase());
             if (!matchSearch) return false;
             
@@ -410,7 +991,7 @@
             if (filter === 'completed') return isEvaluated;
             if (filter === 'pending') return !isEvaluated;
             return true;
-          });
+          }));
 
           const evaluatedEmployees = employees.filter(e => checkManagerEvaluated(e));
           const avgScore = evaluatedEmployees.length > 0 
@@ -418,7 +999,7 @@
             : "0.00";
 
           return (
-            <div className="space-y-6 max-w-6xl mx-auto">
+            <div className="dashboard-view space-y-6 max-w-6xl mx-auto">
               
               {isLoggedIn && (
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -451,16 +1032,23 @@
                 </div>
               )}
 
-              <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-wrap gap-4">
-                <div className="relative">
-                  <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
-                  <input 
-                    type="text" 
-                    placeholder="ค้นหารายชื่อ..." 
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64" 
-                  />
+              <div className="dashboard-toolbar flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-wrap gap-4">
+                <div className="min-w-0">
+                  <div className="relative">
+                    <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
+                    <input 
+                      type="text" 
+                      placeholder="ค้นหารายชื่อ..." 
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-64" 
+                    />
+                  </div>
+                  {isLoggedIn && (
+                    <p className="text-xs text-slate-500 mt-2">
+                      เรียงตามคะแนนรวมจากมากสุดไปน้อยสุด และแสดงรายการรอประเมินไว้ท้ายตาราง
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-3">
                   {isLoggedIn && (
@@ -474,10 +1062,11 @@
                 </div>
               </div>
 
-              <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-                <table className="w-full text-left">
+              <div className="data-panel bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+                <table className="w-full min-w-[960px] text-left">
                   <thead className="bg-slate-50 text-slate-700 border-b">
                     <tr>
+                      {isLoggedIn && <th className="p-4 font-medium text-center w-24">อันดับ</th>}
                       <th className="p-4 font-medium">ชื่อ-นามสกุล</th>
                       <th className="p-4 font-medium">ตำแหน่ง</th>
                       <th className="p-4 font-medium">แผนก/กลุ่มงาน</th>
@@ -492,11 +1081,22 @@
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
-                    {filteredEmployees.map((emp) => {
+                    {filteredEmployees.map((emp, index) => {
                       const isEvaluated = checkManagerEvaluated(emp);
                       return (
                         <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
-                          <td className="p-4 font-bold text-gray-800">{emp.name || emp.employeeName || 'ไม่ระบุชื่อ'}</td>
+                          {isLoggedIn && (
+                            <td className="p-4 text-center">
+                              {isEvaluated ? (
+                                <span className="inline-flex h-9 min-w-9 items-center justify-center rounded-lg bg-slate-900 px-3 text-sm font-bold text-white shadow-sm">
+                                  {index + 1}
+                                </span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                          )}
+                          <td className="p-4 font-bold text-gray-800">{getEmployeeName(emp)}</td>
                           <td className="p-4 text-gray-600">{emp.position || ''}</td>
                           <td className="p-4 text-gray-600">{emp.department || ''}</td>
                           <td className="p-4 text-gray-600">{emp.date || ''}</td>
@@ -504,7 +1104,13 @@
                           {isLoggedIn && (
                             <>
                               <td className="p-4 text-center font-bold text-blue-600">
-                                {isEvaluated ? `${emp.totalScore}%` : <span className="text-gray-400 text-sm font-normal">รอหัวหน้าประเมิน</span>}
+                                {isEvaluated ? (
+                                  <span className="inline-flex min-w-24 justify-center rounded-lg bg-blue-50 px-3 py-2 text-blue-700 ring-1 ring-blue-100">
+                                    {formatScore(getEmployeeScore(emp))}%
+                                  </span>
+                                ) : (
+                                  <span className="text-gray-400 text-sm font-normal">รอหัวหน้าประเมิน</span>
+                                )}
                               </td>
                               <td className="p-4 text-center">
                                 {isEvaluated ? (
@@ -535,7 +1141,7 @@
                     })}
                     {filteredEmployees.length === 0 && (
                       <tr>
-                        <td colSpan={isLoggedIn ? 7 : 4} className="p-8 text-center text-gray-500">
+                        <td colSpan={isLoggedIn ? 8 : 4} className="p-8 text-center text-gray-500">
                           ไม่พบข้อมูลการประเมิน
                         </td>
                       </tr>
@@ -551,7 +1157,7 @@
           return (
             <div 
               onClick={onClick}
-              className={`bg-white p-6 rounded-xl shadow-sm border flex items-center gap-4 ${onClick ? 'cursor-pointer transition-all hover:-translate-y-1 hover:shadow-md' : ''} ${active ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-100'}`}
+              className={`stat-card bg-white p-6 rounded-xl shadow-sm border flex items-center gap-4 ${onClick ? 'cursor-pointer transition-all hover:-translate-y-1 hover:shadow-md' : ''} ${active ? 'border-blue-500 ring-2 ring-blue-100' : 'border-gray-100'}`}
             >
               <div className="p-3 bg-slate-50 rounded-lg">{icon}</div>
               <div>
@@ -640,8 +1246,8 @@
           };
 
           return (
-            <form onSubmit={handleSubmit} className="max-w-6xl mx-auto bg-white rounded-xl shadow-md overflow-hidden pb-10">
-              <div className="bg-blue-600 p-6 text-white flex justify-between items-center">
+            <form onSubmit={handleSubmit} className="eval-form max-w-6xl mx-auto bg-white rounded-xl shadow-md overflow-hidden pb-10">
+              <div className="form-hero bg-blue-600 p-6 text-white flex justify-between items-center">
                 <div>
                   <h2 className="text-2xl font-bold">ฟอร์มประเมินการปฏิบัติงาน</h2>
                   <p className="text-blue-100 mt-1">ส่วนที่ 1-4: ข้อมูล, ผลสัมฤทธิ์, พฤติกรรม และสรุป</p>
@@ -850,7 +1456,7 @@
                 </section>
 
                 {isLoggedIn && (
-                  <section className="bg-green-50 border border-green-200 rounded-xl p-6 relative overflow-hidden mt-8">
+                  <section className="score-summary bg-green-50 border border-green-200 rounded-xl p-6 relative overflow-hidden mt-8">
                     <div className="absolute top-0 right-0 w-32 h-32 bg-green-100 rounded-full -mr-16 -mt-16 opacity-50"></div>
                     <h3 className="text-xl font-bold text-green-800 mb-4 flex items-center gap-2">
                       <FileText className="w-6 h-6" /> สรุปผลการประเมิน (ส่วนที่ 4)
@@ -889,7 +1495,7 @@
                 )}
 
                 {!isLoggedIn && (
-                  <div className="bg-blue-50 text-blue-800 p-4 rounded-lg border border-blue-200 mt-4 text-sm flex gap-3">
+                  <div className="self-note bg-blue-50 text-blue-800 p-4 rounded-lg border border-blue-200 mt-4 text-sm flex gap-3">
                      <div className="mt-0.5"><Lock className="w-5 h-5 text-blue-500"/></div>
                      <div>
                        <p className="font-bold mb-1">ส่วนสำหรับผู้รับการประเมิน (ประเมินตนเอง)</p>
@@ -919,6 +1525,12 @@
             window.scrollTo(0, 0);
           }, []);
 
+          const sortedEmployees = sortEmployeesByScoreDesc(employees);
+          const evaluatedEmployees = sortedEmployees.filter(emp => checkManagerEvaluated(emp));
+          const avgScore = evaluatedEmployees.length > 0
+            ? evaluatedEmployees.reduce((sum, emp) => sum + getEmployeeScore(emp), 0) / evaluatedEmployees.length
+            : 0;
+
           return (
             <div className="max-w-[210mm] mx-auto bg-white shadow-xl mb-10 print:shadow-none print:m-0">
               <div className="bg-slate-800 text-white p-4 flex justify-between items-center print:hidden rounded-t-lg">
@@ -931,38 +1543,55 @@
               </div>
 
               {/* บังคับฟอนต์ TH Sarabun PSK และขนาดข้อความปกติที่ 16pt */}
-              <div className="p-8 print:p-0 text-black bg-white font-['TH_Sarabun_PSK','Sarabun',sans-serif] text-[16pt] leading-[1.3]">
-                <div className="text-center mb-6">
+              <div className="print-report print-fit-two-pages p-8 print:p-0 text-black bg-white font-['TH_Sarabun_PSK','Sarabun',sans-serif] text-[16pt] leading-[1.3]">
+                <div className="report-title text-center mb-6">
                   <h1 className="text-[18pt] font-bold mb-1">ใบสรุปผลการประเมินประสิทธิภาพการปฏิบัติงาน (รวมทุกรายชื่อ)</h1>
                   <h2 className="text-[18pt] font-normal">งานอุบัติเหตุฉุกเฉินและนิติเวช</h2>
                   <h2 className="text-[18pt] font-normal">โรงพยาบาลเสลภูมิ</h2>
                   <h2 className="text-[18pt] font-normal">สังกัดสำนักงานปลัดกระทรวงสาธารณสุข</h2>
+                  <p className="text-[14pt] mt-2">เรียงตามคะแนนรวมจากมากสุดไปน้อยสุด</p>
+                </div>
+
+                <div className="report-summary grid grid-cols-3 gap-3 mb-4 text-center">
+                  <div className="border border-black p-2">
+                    <p className="font-bold">บุคลากรทั้งหมด</p>
+                    <p>{employees.length} ราย</p>
+                  </div>
+                  <div className="border border-black p-2">
+                    <p className="font-bold">ประเมินครบแล้ว</p>
+                    <p>{evaluatedEmployees.length} ราย</p>
+                  </div>
+                  <div className="border border-black p-2">
+                    <p className="font-bold">คะแนนเฉลี่ยรวม</p>
+                    <p>{formatScore(avgScore)}%</p>
+                  </div>
                 </div>
 
                 {/* ตารางจะไหลหน้ากระดาษและมีหัวตารางทุกหน้าอัตโนมัติ */}
                 <table className="w-full border-collapse border border-black mt-4">
                   <thead>
                     <tr className="bg-gray-100 text-center font-bold">
-                      <th className="border border-black p-2 w-16">ลำดับ</th>
+                      <th className="border border-black p-2 w-20">ลำดับคะแนน</th>
                       <th className="border border-black p-2">ชื่อ-สกุล</th>
                       <th className="border border-black p-2">ตำแหน่ง</th>
+                      <th className="border border-black p-2">งาน/กลุ่มงาน</th>
                       <th className="border border-black p-2 w-32">ผลคะแนนรวม</th>
-                      <th className="border border-black p-2 w-32">ผลการประเมิน</th>
+                      <th className="border border-black p-2 w-32">ระดับ/สถานะ</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {employees.map((emp, index) => {
+                    {sortedEmployees.map((emp, index) => {
                       const isEvaluated = checkManagerEvaluated(emp);
-                      const score = emp.totalScore || 0;
+                      const score = getEmployeeScore(emp);
                       let resultText = '-';
                       let resultClass = '';
                       
                       if (isEvaluated) {
                         if (score >= 60) {
-                          resultText = 'ผ่าน';
+                          resultText = emp.grade ? `${emp.grade} / ผ่าน` : 'ผ่าน';
                           resultClass = 'text-green-600 print:text-black';
                         } else {
-                          resultText = 'ไม่ผ่าน';
+                          resultText = emp.grade ? `${emp.grade} / ไม่ผ่าน` : 'ไม่ผ่าน';
                           resultClass = 'text-red-600 print:text-black';
                         }
                       } else {
@@ -972,19 +1601,20 @@
 
                       return (
                         <tr key={emp.id}>
-                          <td className="border border-black p-2 text-center">{index + 1}</td>
-                          <td className="border border-black p-2">{emp.name || emp.employeeName || 'ไม่ระบุชื่อ'}</td>
+                          <td className="border border-black p-2 text-center font-bold">{isEvaluated ? index + 1 : '-'}</td>
+                          <td className="border border-black p-2">{getEmployeeName(emp)}</td>
                           <td className="border border-black p-2">{emp.position || '-'}</td>
-                          <td className="border border-black p-2 text-center">{isEvaluated ? score.toFixed(2) : '-'}</td>
+                          <td className="border border-black p-2">{emp.department || '-'}</td>
+                          <td className="border border-black p-2 text-center font-bold">{isEvaluated ? formatScore(score) : '-'}</td>
                           <td className={`border border-black p-2 text-center font-bold ${resultClass}`}>
                             {resultText}
                           </td>
                         </tr>
                       );
                     })}
-                    {employees.length === 0 && (
+                    {sortedEmployees.length === 0 && (
                       <tr>
-                        <td colSpan="5" className="border border-black p-6 text-center text-gray-500">
+                        <td colSpan="6" className="border border-black p-6 text-center text-gray-500">
                           ยังไม่มีข้อมูลผู้รับการประเมินในระบบ
                         </td>
                       </tr>
@@ -993,7 +1623,7 @@
                 </table>
                 
                 {/* ลายเซ็นด้านล่าง (ป้องกันการถูกตัดแยกหน้า) */}
-                <div className="mt-12 flex flex-col items-center gap-12 break-inside-avoid">
+                <div className="signature-block mt-12 flex flex-col items-center gap-12 break-inside-avoid">
                    <div className="text-center">
                       <p className="mb-8 font-bold text-[18pt]">ผู้รายงาน</p>
                       <p className="whitespace-nowrap">( นายทวี แสนสนอง )</p>
@@ -1034,7 +1664,7 @@
               </div>
 
               {/* บังคับฟอนต์ TH Sarabun PSK และขนาดข้อความปกติที่ 16pt ปรับลด padding เพื่อให้ชิดกรอบพอดี 1-2 หน้า */}
-              <div className="p-8 print:p-0 text-black bg-white font-['TH_Sarabun_PSK','Sarabun',sans-serif] text-[16pt] leading-[1.3]">
+              <div className="individual-print-report print-fit-two-pages p-8 print:p-0 text-black bg-white font-['TH_Sarabun_PSK','Sarabun',sans-serif] text-[16pt] leading-[1.3]">
                 <div className="text-center mb-4">
                   <h1 className="text-[18pt] font-bold mb-1">ใบสรุปผลการประเมินประสิทธิภาพการปฏิบัติงาน</h1>
                   <h2 className="text-[18pt] font-normal">งานอุบัติเหตุฉุกเฉินและนิติเวช</h2>
@@ -1100,7 +1730,7 @@
 
                 <div className="mb-4 border border-black p-2 text-center bg-gray-50 break-inside-avoid">
                   <p className="font-bold mb-1">ระดับผลการประเมิน</p>
-                  <div className="flex justify-between items-center px-2 text-[15pt]">
+                  <div className="grade-line flex justify-between items-center px-2 text-[15pt]">
                     <span className={data.grade === 'ดีเด่น' ? 'font-bold underline' : ''}>[ {data.grade === 'ดีเด่น' ? '✓' : '  '} ] ดีเด่น (90-100%)</span>
                     <span className={data.grade === 'ดีมาก' ? 'font-bold underline' : ''}>[ {data.grade === 'ดีมาก' ? '✓' : '  '} ] ดีมาก (80-89%)</span>
                     <span className={data.grade === 'ดี' ? 'font-bold underline' : ''}>[ {data.grade === 'ดี' ? '✓' : '  '} ] ดี (70-79%)</span>
@@ -1118,7 +1748,7 @@
                 </div>
 
                 {/* ส่วนลายเซ็น ถูกป้องกันการตัดครึ่งเวลาพิมพ์ ถ้าที่ไม่พอมันจะปัดลงหน้า 2 ทันที */}
-                <div className="mt-6 break-inside-avoid">
+                <div className="individual-signatures mt-6 break-inside-avoid">
                   <h3 className="text-[18pt] font-bold mb-4">ส่วนที่ ๕ การรับทราบผลการประเมิน</h3>
                   <div className="grid grid-cols-2 gap-y-8 gap-x-8 px-4">
                     {/* 1. ผู้รับการประเมิน */}
