@@ -1756,6 +1756,8 @@
           { id: 5, name: 'การทำงานเป็นทีม', target: 5, weight: 20, selfScore: 0, managerScore: 0 },
         ];
 
+        const MIN_EVALUATED_FOR_PUBLIC_AVG = 5;
+
         const fiscalYearOptions = ['2568', '2569', '2570', '2571', '2572'];
         const periodOptions = ['ครั้งที่ 1 (1 ต.ค. - 31 มี.ค.)', 'ครั้งที่ 2 (1 เม.ย. - 30 ก.ย.)'];
 
@@ -2611,6 +2613,8 @@
           const avgScore = evaluatedEmployees.length > 0 
             ? (evaluatedEmployees.reduce((sum, e) => sum + Number(e.totalScore || 0), 0) / evaluatedEmployees.length).toFixed(2)
             : "0.00";
+          // เมื่อมีผู้ถูกประเมินน้อย ค่าเฉลี่ยอาจเผยคะแนนรายคน จึงแสดงจริงเฉพาะหัวหน้า
+          const showAvgScore = isLoggedIn || evaluatedEmployees.length >= MIN_EVALUATED_FOR_PUBLIC_AVG;
 
           return (
             <div className="dashboard-view space-y-6 max-w-6xl mx-auto">
@@ -2633,38 +2637,36 @@
                 </div>
               </section>
 
-              {isLoggedIn && (
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                  <StatCard 
-                    title="บุคลากรทั้งหมด" 
-                    value={scopedEmployees.length.toString()} 
-                    icon={<Users className="w-8 h-8 text-blue-500" />} 
-                    onClick={() => setFilter('all')}
-                    active={filter === 'all'}
-                  />
-                  <StatCard 
-                    title="ประเมินครบแล้ว" 
-                    value={evaluatedEmployees.length.toString()} 
-                    icon={<CheckCircle className="w-8 h-8 text-green-500" />} 
-                    onClick={() => setFilter('completed')}
-                    active={filter === 'completed'}
-                    progress={scopedEmployees.length > 0 ? (evaluatedEmployees.length / scopedEmployees.length) * 100 : 0}
-                  />
-                  <StatCard 
-                    title="รอหัวหน้าประเมิน" 
-                    value={scopedEmployees.filter(e => !checkManagerEvaluated(e)).length.toString()} 
-                    icon={<BarChart3 className="w-8 h-8 text-orange-500" />} 
-                    onClick={() => setFilter('pending')}
-                    active={filter === 'pending'}
-                  />
-                  <StatCard 
-                    title="คะแนนเฉลี่ยรวม" 
-                    value={avgScore} 
-                    icon={<FileText className="w-8 h-8 text-purple-500" />}
-                    progress={Number(avgScore)}
-                  />
-                </div>
-              )}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <StatCard
+                  title="บุคลากรทั้งหมด"
+                  value={scopedEmployees.length.toString()}
+                  icon={<Users className="w-8 h-8 text-blue-500" />}
+                  onClick={() => setFilter('all')}
+                  active={filter === 'all'}
+                />
+                <StatCard
+                  title="ประเมินครบแล้ว"
+                  value={evaluatedEmployees.length.toString()}
+                  icon={<CheckCircle className="w-8 h-8 text-green-500" />}
+                  onClick={() => setFilter('completed')}
+                  active={filter === 'completed'}
+                  progress={scopedEmployees.length > 0 ? (evaluatedEmployees.length / scopedEmployees.length) * 100 : 0}
+                />
+                <StatCard
+                  title="รอหัวหน้าประเมิน"
+                  value={scopedEmployees.filter(e => !checkManagerEvaluated(e)).length.toString()}
+                  icon={<BarChart3 className="w-8 h-8 text-orange-500" />}
+                  onClick={() => setFilter('pending')}
+                  active={filter === 'pending'}
+                />
+                <StatCard
+                  title="คะแนนเฉลี่ยรวม"
+                  value={showAvgScore ? avgScore : '-'}
+                  icon={<FileText className="w-8 h-8 text-purple-500" />}
+                  progress={showAvgScore ? Number(avgScore) : undefined}
+                />
+              </div>
 
               <div className="dashboard-toolbar flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex-wrap gap-4">
                 <div className="min-w-0">
