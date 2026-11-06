@@ -277,7 +277,6 @@
                     radial-gradient(460px 260px at 45% 120%, rgba(37,99,235,0.5), transparent 70%),
                     linear-gradient(120deg, var(--ui-navy), var(--ui-navy-2));
                 box-shadow: var(--ui-shadow-lg);
-                animation: ui-rise 420ms ease both;
             }
 
             body.modern-ui .dash-hero-body {
@@ -378,15 +377,11 @@
                 border-radius: var(--ui-radius);
                 padding: 20px;
                 box-shadow: var(--ui-shadow-sm);
-                animation: ui-rise 420ms ease both;
             }
-
-            body.modern-ui .stat-card:nth-child(2) { animation-delay: 50ms; }
-            body.modern-ui .stat-card:nth-child(3) { animation-delay: 100ms; }
-            body.modern-ui .stat-card:nth-child(4) { animation-delay: 150ms; }
 
             body.modern-ui .stat-card:hover {
                 box-shadow: var(--ui-shadow-md);
+                transform: none;
             }
 
             body.modern-ui .stat-card.border-blue-500 {
@@ -818,34 +813,35 @@
                 border-radius: 50%;
                 font-size: 13px;
                 font-weight: 500;
-                color: var(--ui-ink-soft);
-                background: var(--ui-surface);
-                border: 1px solid var(--ui-line-strong);
+                border: 1px solid transparent;
                 font-variant-numeric: tabular-nums;
             }
 
-            body.modern-ui .score-dot:not(.is-active):hover:not(:disabled) {
-                border-color: var(--ui-blue);
-                color: var(--ui-blue);
+            /* สีปุ่มคะแนนไล่จากอ่อนไปเข้มตามคะแนน 1-5 */
+            body.modern-ui .score-dot.score-1 { color: #0f1c33; background: #dbeafe; }
+            body.modern-ui .score-dot.score-2 { color: #0f1c33; background: #93c5fd; }
+            body.modern-ui .score-dot.score-3 { color: #0f1c33; background: #60a5fa; }
+            body.modern-ui .score-dot.score-4 { color: #ffffff; background: #2563eb; }
+            body.modern-ui .score-dot.score-5 { color: #ffffff; background: #1e3a8a; }
+
+            /* เมื่อเลือกแล้ว ปุ่มอื่นจางลง ปุ่มที่เลือกมีวงแหวนเด่นชัด */
+            body.modern-ui .score-selector.has-value .score-dot:not(.is-active) {
+                opacity: 0.4;
+            }
+
+            body.modern-ui .score-selector .score-dot:not(.is-active):hover:not(:disabled) {
+                opacity: 1;
             }
 
             body.modern-ui .score-dot.is-active {
-                color: #fff;
-                border-color: transparent;
-                background: var(--ui-gradient);
-                box-shadow: 0 6px 14px -6px rgba(37,99,235,0.85);
+                font-weight: 700;
+                box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #0f1c33;
             }
 
             body.modern-ui .score-dot:disabled {
                 cursor: not-allowed;
-                color: #aab5c6;
-                background: #f1f4f9;
-                border-color: var(--ui-line);
-            }
-
-            body.modern-ui .score-dot.is-active:disabled {
-                color: #fff;
-                background: #93a3bb;
+                filter: grayscale(1);
+                opacity: 0.5;
             }
 
             /* ช่องเลือกรอบในแบบฟอร์ม */
@@ -994,7 +990,334 @@
                 }
             }
 
+            /* ให้เอกสารหลักไม่เลื่อน เลื่อนเฉพาะพื้นที่เนื้อหา แถบที่อยู่บนมือถือจึงไม่ทำให้หน้ากระโดด */
+            html,
+            body.modern-ui {
+                height: 100%;
+                overflow: hidden;
+                overscroll-behavior: none;
+            }
+
+            body.modern-ui #root,
+            body.modern-ui .app-shell {
+                height: 100vh;
+                height: 100dvh;
+                min-height: 0;
+            }
+
+            body.modern-ui .app-content {
+                -webkit-overflow-scrolling: touch;
+                overscroll-behavior: contain;
+            }
+
+            body.modern-ui button,
+            body.modern-ui a,
+            body.modern-ui select,
+            body.modern-ui input,
+            body.modern-ui textarea {
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+            }
+
+            body.modern-ui .app-toast {
+                position: fixed;
+                top: 76px;
+                right: 16px;
+                left: auto;
+                max-width: calc(100vw - 32px);
+            }
+
+            body.modern-ui .fixed.inset-0 {
+                padding: 16px;
+            }
+
+            /* จอสัมผัส: ขนาดอักษร 16px กัน iOS ซูมอัตโนมัติ และไม่ขยับปุ่มตอนแตะ */
+            @media (pointer: coarse), (max-width: 1399px) {
+                body.modern-ui input,
+                body.modern-ui select,
+                body.modern-ui textarea {
+                    font-size: 16px;
+                }
+
+                body.modern-ui button:active:not(:disabled) {
+                    transform: none;
+                }
+            }
+
+            /* จอสัมผัสขนาดใหญ่ที่ยังแสดงเป็นตาราง: เพิ่มขนาดปุ่มให้แตะง่าย */
+            @media (pointer: coarse) and (min-width: 1100px) {
+                body.modern-ui .data-panel td.cell-actions {
+                    padding-left: 4px;
+                    padding-right: 4px;
+                }
+
+                body.modern-ui .data-panel td.cell-actions > .flex {
+                    gap: 0;
+                }
+
+                body.modern-ui .data-panel td.cell-actions button {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 40px;
+                    height: 40px;
+                }
+            }
+
+            @media (pointer: coarse) and (min-width: 1280px) {
+                body.modern-ui .score-dot {
+                    width: 38px;
+                    height: 38px;
+                }
+
+                body.modern-ui .eval-form th.w-52 {
+                    width: 230px;
+                }
+            }
+
+            /* ถึงจอใหญ่จึงแสดงแถบข้าง จอเล็กกว่านั้นใช้แถบบน */
+            @media (min-width: 1400px) {
+                body.modern-ui .app-header .brand-when-no-sidebar {
+                    display: none;
+                }
+            }
+
+            @media (max-width: 1399px) {
+                body.modern-ui .admin-sidebar {
+                    display: none;
+                }
+
+                body.modern-ui .data-panel table {
+                    min-width: 1000px;
+                }
+            }
+
+            /* แบบฟอร์ม iPad และมือถือ: แต่ละข้อเป็นการ์ด ไม่ต้องเลื่อนแนวนอน */
+            @media (max-width: 1279px) {
+                body.modern-ui .eval-form table,
+                body.modern-ui .eval-form tbody,
+                body.modern-ui .eval-form tr {
+                    display: block;
+                    width: 100%;
+                }
+
+                body.modern-ui .eval-form table {
+                    border: 0;
+                    border-radius: 0;
+                    overflow: visible;
+                }
+
+                body.modern-ui .eval-form thead {
+                    display: none;
+                }
+
+                body.modern-ui .eval-form tbody tr {
+                    margin-bottom: 12px;
+                    padding: 14px;
+                    background: var(--ui-surface);
+                    border: 1px solid var(--ui-line);
+                    border-radius: 14px;
+                }
+
+                body.modern-ui .eval-form tbody tr:last-child {
+                    margin-bottom: 0;
+                }
+
+                body.modern-ui .eval-form tbody td,
+                body.modern-ui .eval-form tbody tr:last-child td {
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    width: 100%;
+                    min-width: 0;
+                    padding: 8px 0;
+                    background: transparent;
+                    border: 0;
+                    text-align: right;
+                }
+
+                body.modern-ui .eval-form tbody td:first-child:not([colspan]) {
+                    display: block;
+                    min-width: 0;
+                    padding-top: 0;
+                    text-align: left;
+                }
+
+                body.modern-ui .eval-form tbody td[data-label]::before {
+                    content: attr(data-label);
+                    flex-shrink: 0;
+                    font-size: 13px;
+                    font-weight: 500;
+                    color: var(--ui-muted);
+                    text-align: left;
+                }
+
+                body.modern-ui .eval-form tbody td.cell-score {
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 8px;
+                }
+
+                body.modern-ui .eval-form tbody tr.bg-slate-100 td {
+                    justify-content: flex-end;
+                    padding: 2px 0;
+                }
+
+                body.modern-ui .score-selector {
+                    display: grid;
+                    grid-template-columns: repeat(5, 1fr);
+                    gap: 8px;
+                    width: 100%;
+                    max-width: 420px;
+                }
+
+                body.modern-ui .score-dot {
+                    width: 100%;
+                    height: 44px;
+                    border-radius: 12px;
+                    font-size: 16px;
+                }
+            }
+
+            /* หน้าแรก แท็บเล็ตและมือถือ: แต่ละรายการเป็นการ์ด */
+            @media (max-width: 1099px) {
+                body.modern-ui .dashboard-view > .grid {
+                    grid-template-columns: repeat(2, minmax(0, 1fr));
+                }
+
+                body.modern-ui .data-panel {
+                    background: transparent;
+                    border: 0;
+                    box-shadow: none;
+                    overflow: visible;
+                }
+
+                body.modern-ui .data-panel table {
+                    display: block;
+                    width: 100%;
+                    min-width: 0;
+                }
+
+                body.modern-ui .data-panel thead {
+                    display: none;
+                }
+
+                body.modern-ui .data-panel tbody {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+                    gap: 12px;
+                }
+
+                body.modern-ui .data-panel tbody > tr {
+                    display: flex;
+                    flex-wrap: wrap;
+                    align-content: flex-start;
+                    align-items: center;
+                    min-width: 0;
+                    padding: 14px;
+                    background: var(--ui-surface);
+                    border: 1px solid var(--ui-line);
+                    border-radius: 14px;
+                    box-shadow: var(--ui-shadow-sm);
+                }
+
+                body.modern-ui .data-panel tbody > tr > td {
+                    display: flex;
+                    flex: 0 0 100%;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 12px;
+                    min-width: 0;
+                    padding: 6px 0;
+                    text-align: right;
+                }
+
+                body.modern-ui .data-panel tbody > tr > td[data-label]::before {
+                    content: attr(data-label);
+                    flex-shrink: 0;
+                    font-size: 13px;
+                    font-weight: 400;
+                    color: var(--ui-muted);
+                    text-align: left;
+                }
+
+                body.modern-ui .data-panel tbody > tr > td[colspan] {
+                    justify-content: center;
+                    text-align: center;
+                }
+
+                body.modern-ui .data-panel tbody > tr > td.cell-rank {
+                    flex: 0 0 auto;
+                    padding-right: 10px;
+                }
+
+                body.modern-ui .data-panel tbody > tr > td.cell-name {
+                    flex: 1 1 0;
+                    justify-content: flex-start;
+                    text-align: left;
+                }
+
+                body.modern-ui .data-panel tbody > tr > td.cell-actions {
+                    display: block;
+                    margin-top: 6px;
+                    padding: 8px 0 0;
+                    border-top: 1px solid var(--ui-line);
+                }
+
+                body.modern-ui .data-panel td.cell-actions > .flex {
+                    justify-content: space-between;
+                }
+
+                body.modern-ui .data-panel td.cell-actions button {
+                    display: inline-flex;
+                    align-items: center;
+                    justify-content: center;
+                    width: 44px;
+                    height: 44px;
+                }
+
+                body.modern-ui .score-cell {
+                    width: 120px;
+                }
+            }
+
             @media (max-width: 640px) {
+                body.modern-ui .stat-card {
+                    gap: 10px;
+                    padding: 14px;
+                }
+
+                body.modern-ui .stat-card > .bg-slate-50 {
+                    display: none;
+                }
+
+                body.modern-ui .max-w-\[210mm\] > .bg-slate-800 {
+                    flex-wrap: wrap;
+                    gap: 8px;
+                }
+
+                body.modern-ui .print-report,
+                body.modern-ui .individual-print-report {
+                    padding: 16px;
+                    font-size: 13pt;
+                    overflow-x: auto;
+                }
+
+                body.modern-ui .individual-print-report .grade-line {
+                    flex-wrap: wrap;
+                    justify-content: flex-start;
+                    gap: 4px 12px;
+                }
+
+                body.modern-ui .individual-signatures .grid {
+                    grid-template-columns: 1fr;
+                }
+
+                body.modern-ui .report-summary {
+                    grid-template-columns: 1fr;
+                }
+
                 body.modern-ui .app-header {
                     height: auto;
                     min-height: 64px;
@@ -1704,6 +2027,12 @@
           const [isSaving, setIsSaving] = useState(false);
           const isSavingRef = useRef(false);
           const loadRequestRef = useRef(0);
+          const contentRef = useRef(null);
+
+          // เปลี่ยนหน้าแล้วเริ่มที่ด้านบนเสมอ ไม่ค้างตำแหน่งเลื่อนของหน้าก่อน
+          useEffect(() => {
+            if (contentRef.current) contentRef.current.scrollTop = 0;
+          }, [currentView]);
 
           // ดึงข้อมูลล่าสุดจากฐานข้อมูล ไม่ทับข้อมูลระหว่างบันทึก และไม่ใช้ผลของคำขอที่เก่ากว่า
           const refreshEmployees = async () => {
@@ -1871,7 +2200,7 @@
               <main className="flex-1 flex flex-col overflow-hidden relative">
                 <header className="app-header bg-white shadow-sm h-16 flex items-center justify-between px-6 print:hidden z-10">
                   <div className="flex items-center gap-3">
-                    {!isLoggedIn && <span className="brand-mark"><Activity className="w-5 h-5" /></span>}
+                    <span className={`brand-mark ${isLoggedIn ? 'brand-when-no-sidebar' : ''}`}><Activity className="w-5 h-5" /></span>
                     <div>
                       <h2 className="text-lg font-semibold text-gray-800 leading-tight">
                         {currentView === 'dashboard' && 'ระบบประเมินประสิทธิภาพการปฏิบัติงาน'}
@@ -1897,7 +2226,7 @@
                   </div>
                 </header>
 
-                <div className="app-content flex-1 overflow-auto p-6 relative print:overflow-visible">
+                <div ref={contentRef} className="app-content flex-1 overflow-auto p-6 relative print:overflow-visible">
                   {toastMessage && (
                     <div className="app-toast absolute top-4 right-4 bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg flex items-center gap-2 z-50 animate-bounce print:hidden">
                       <CheckCircle className="w-5 h-5" />
@@ -2197,7 +2526,7 @@
                           return (
                             <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
                               {isLoggedIn && (
-                                <td className="p-4 text-center">
+                                <td className="cell-rank p-4 text-center">
                                   {isEvaluated ? (
                                     <span className={`rank-badge rank-${index + 1}`}>{index + 1}</span>
                                   ) : (
@@ -2205,20 +2534,20 @@
                                   )}
                                 </td>
                               )}
-                              <td className="p-4 font-semibold text-gray-800">
+                              <td className="cell-name p-4 font-semibold text-gray-800">
                                 <span className="person-cell">
                                   <span className="person-avatar" aria-hidden="true">{getNameInitial(getEmployeeName(emp))}</span>
                                   {getEmployeeName(emp)}
                                 </span>
                               </td>
-                              <td className="p-4 text-gray-600">{emp.position || ''}</td>
-                              <td className="p-4 text-gray-600">{emp.department || ''}</td>
-                              <td className="p-4 text-center font-medium text-blue-700">{getEmployeeFiscalYear(emp)}</td>
-                              <td className="p-4 text-gray-600">{formatThaiDate(emp.date)}</td>
+                              <td data-label="ตำแหน่ง" className="p-4 text-gray-600">{emp.position || ''}</td>
+                              <td data-label="แผนก/กลุ่มงาน" className="p-4 text-gray-600">{emp.department || ''}</td>
+                              <td data-label="ปีงบประมาณ" className="p-4 text-center font-medium text-blue-700">{getEmployeeFiscalYear(emp)}</td>
+                              <td data-label="วันที่ประเมิน" className="p-4 text-gray-600">{formatThaiDate(emp.date)}</td>
 
                               {isLoggedIn && (
                                 <>
-                                  <td className="p-4 text-center font-bold text-blue-600">
+                                  <td data-label="คะแนนเฉลี่ยรวม" className="p-4 text-center font-bold text-blue-600">
                                     {isEvaluated ? (
                                       <span className={`score-cell ${index < TOP_SCORE_COLORS.length ? 'is-top' : ''}`} style={getTopScoreStyle(index)}>
                                         <span className="score-value">{formatScore(getEmployeeScore(emp))}%</span>
@@ -2228,14 +2557,14 @@
                                       <span className="text-gray-400 text-sm font-normal">รอหัวหน้าประเมิน</span>
                                     )}
                                   </td>
-                                  <td className="p-4 text-center">
+                                  <td data-label="ระดับ" className="p-4 text-center">
                                     {isEvaluated ? (
                                       <span className={`grade-pill ${getGradeClass(emp.grade)}`}>{emp.grade}</span>
                                     ) : (
                                       <span className="text-gray-400">-</span>
                                     )}
                                   </td>
-                                  <td className="p-4">
+                                  <td className="cell-actions p-4">
                                     <div className="flex justify-center gap-2">
                                       <button onClick={() => onEdit(emp)} className="text-blue-500 hover:text-blue-700 p-2 rounded-lg hover:bg-blue-50 transition-colors" title="แก้ไข/ประเมิน">
                                         <Edit className="w-5 h-5" />
@@ -2275,7 +2604,7 @@
         function ScoreSelector({ value, onChange, disabled, label }) {
           const current = Number(value) || 0;
           return (
-            <div className="score-selector" role="group" aria-label={label}>
+            <div className={`score-selector ${current > 0 ? 'has-value' : ''}`} role="group" aria-label={label}>
               {[1,2,3,4,5].map(n => (
                 <button
                   key={n}
@@ -2284,7 +2613,7 @@
                   aria-pressed={current === n}
                   title={current === n ? 'กดซ้ำเพื่อล้างคะแนน' : `ให้คะแนน ${n}`}
                   onClick={() => onChange(current === n ? 0 : n)}
-                  className={`score-dot ${current === n ? 'is-active' : ''}`}
+                  className={`score-dot score-${n} ${current === n ? 'is-active' : ''}`}
                 >
                   {n}
                 </button>
@@ -2523,23 +2852,23 @@
                                 <div className="pt-2">{item.id}. {item.name}</div>
                               )}
                             </td>
-                            <td className="p-3 text-center bg-slate-50 align-middle">{item.target}</td>
-                            <td className="p-3 text-center align-middle">{item.weight} %</td>
+                            <td data-label="เป้าหมาย" className="p-3 text-center bg-slate-50 align-middle">{item.target}</td>
+                            <td data-label="น้ำหนัก" className="p-3 text-center align-middle">{item.weight} %</td>
                             
-                            <td className="p-3 text-center align-middle bg-blue-50">
+                            <td data-label="ประเมินตนเอง" className="cell-score p-3 text-center align-middle bg-blue-50">
                               <ScoreSelector label={`ประเมินตนเอง ข้อ ${item.id}`} value={item.selfScore} onChange={(n) => updateScore('kpi', item.id, 'selfScore', n)} />
                             </td>
 
-                            <td className="p-3 text-center align-middle bg-purple-50">
+                            <td data-label="หัวหน้าประเมิน" className="cell-score p-3 text-center align-middle bg-purple-50">
                               <ScoreSelector label={`หัวหน้าประเมิน ข้อ ${item.id}`} value={item.managerScore} disabled={!isLoggedIn} onChange={(n) => updateScore('kpi', item.id, 'managerScore', n)} />
                             </td>
 
                             {isLoggedIn && (
                               <>
-                                <td className="p-3 text-center align-middle bg-yellow-50 font-bold text-yellow-800">
+                                <td data-label="คะแนนเฉลี่ย" className="p-3 text-center align-middle bg-yellow-50 font-bold text-yellow-800">
                                   {calculateRowAverage(item.selfScore, item.managerScore).toFixed(2)}
                                 </td>
-                                <td className="p-3 text-center font-bold text-blue-600 bg-blue-50 align-middle">
+                                <td data-label="ผลลัพธ์" className="p-3 text-center font-bold text-blue-600 bg-blue-50 align-middle">
                                   {(calculateRowAverage(item.selfScore, item.managerScore) * (item.weight / 100)).toFixed(2)}
                                 </td>
                               </>
@@ -2588,23 +2917,23 @@
                         {behaviorScores.map((item) => (
                           <tr key={item.id} className="border-b border-x border-slate-200">
                             <td className="p-3 font-medium text-gray-700 align-middle">{item.id}. {item.name}</td>
-                            <td className="p-3 text-center bg-slate-50 align-middle">{item.target}</td>
-                            <td className="p-3 text-center align-middle">{item.weight} %</td>
+                            <td data-label="เป้าหมาย" className="p-3 text-center bg-slate-50 align-middle">{item.target}</td>
+                            <td data-label="น้ำหนัก" className="p-3 text-center align-middle">{item.weight} %</td>
                             
-                            <td className="p-3 text-center align-middle bg-blue-50">
+                            <td data-label="ประเมินตนเอง" className="cell-score p-3 text-center align-middle bg-blue-50">
                               <ScoreSelector label={`ประเมินตนเอง ข้อ ${item.id}`} value={item.selfScore} onChange={(n) => updateScore('behavior', item.id, 'selfScore', n)} />
                             </td>
 
-                            <td className="p-3 text-center align-middle bg-purple-50">
+                            <td data-label="หัวหน้าประเมิน" className="cell-score p-3 text-center align-middle bg-purple-50">
                               <ScoreSelector label={`หัวหน้าประเมิน ข้อ ${item.id}`} value={item.managerScore} disabled={!isLoggedIn} onChange={(n) => updateScore('behavior', item.id, 'managerScore', n)} />
                             </td>
 
                             {isLoggedIn && (
                               <>
-                                <td className="p-3 text-center align-middle bg-yellow-50 font-bold text-yellow-800">
+                                <td data-label="คะแนนเฉลี่ย" className="p-3 text-center align-middle bg-yellow-50 font-bold text-yellow-800">
                                   {calculateRowAverage(item.selfScore, item.managerScore).toFixed(2)}
                                 </td>
-                                <td className="p-3 text-center font-bold text-blue-600 bg-blue-50 align-middle">
+                                <td data-label="ผลลัพธ์" className="p-3 text-center font-bold text-blue-600 bg-blue-50 align-middle">
                                   {(calculateRowAverage(item.selfScore, item.managerScore) * (item.weight / 100)).toFixed(2)}
                                 </td>
                               </>
