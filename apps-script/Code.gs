@@ -101,13 +101,11 @@ function setupOnce() {
 // หัวหน้า
 // ==========================================
 
-function setManagerAccount() {
-  PropertiesService.getScriptProperties().setProperties({
-    MANAGER_USERNAME: 'wee',
-    MANAGER_PASSWORD: '2112'
-  });
-  CacheService.getScriptCache().remove('login_fail');
-}
+function login_(data) {
+  var props = PropertiesService.getScriptProperties();
+  var username = props.getProperty('MANAGER_USERNAME');
+  var password = props.getProperty('MANAGER_PASSWORD');
+  if (!username || !password) return fail_('CONFIG');
 
   var key = 'login_fail';
   if (isRateLimited_(key)) return fail_('RATE_LIMITED');
