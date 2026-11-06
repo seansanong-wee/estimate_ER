@@ -1740,8 +1740,10 @@
         // ==========================================
         const GOOGLE_SHEET_WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxQblgAfEKseQSqwk8yPV5ecKZqqVAJ6Xq8P75FLkokSF9hbnB2CPaGrJ1nvjAsfLBDQQ/exec"; 
 
+        const KPI_1_EXAMPLE = 'ตัวอย่าง: อัตราการเสียชีวิตของผู้ป่วยวิกฤตฉุกเฉิน (triage level 1) ภายใน 24 ชม.';
+
         const defaultKpi = [
-          { id: 1, name: 'อัตราการเสียชีวิตของผู้ป่วยวิกฤตฉุกเฉิน (triage level 1) ภายใน 24 ชม.', target: 5, weight: 20, selfScore: 0, managerScore: 0 },
+          { id: 1, name: '', target: 5, weight: 20, selfScore: 0, managerScore: 0 },
           { id: 2, name: 'หน้าที่รับผิดชอบหลัก', target: 5, weight: 30, selfScore: 0, managerScore: 0 },
           { id: 3, name: 'พฤติกรรมบริการ', target: 5, weight: 20, selfScore: 0, managerScore: 0 },
           { id: 4, name: 'หน้าที่ที่ได้รับมอบหมาย', target: 5, weight: 20, selfScore: 0, managerScore: 0 },
@@ -2992,13 +2994,24 @@
             return 'ต้องปรับปรุง';
           };
 
-          const handleSubmit = (e) => {
-            e.preventDefault();
-            const employeeName = normalizeName(formData.employeeName || formData.name);
-            if (!employeeName) {
-              alert("กรุณาระบุชื่อผู้รับการประเมิน");
-              return;
+          const employeeName = normalizeName(formData.employeeName || formData.name);
+          const targetFiscalYear = String(formData.fiscalYear || getCurrentFiscalYear());
+          const targetPeriod = formData.period || periodOptions[0];
+
+          // คืนข้อความของสิ่งแรกที่ยังขาด ถ้าครบคืน null ปุ่มบันทึกจึงกดได้เมื่อครบเท่านั้น
+          const getValidationError = () => {
+            if (!employeeName) return 'กรุณาระบุชื่อผู้รับการประเมิน';
+
+            // การแก้ไขที่ย้ายชื่อ/ปี/รอบ ต้องไม่ไปซ้ำกับแบบประเมินอีกครั้งของบุคคลเดียวกัน
+            const isSameRecordSlot = !!initialData
+              && normalizeName(getEmployeeName(initialData)) === employeeName
+              && getEmployeeFiscalYear(initialData) === targetFiscalYear
+              && getEmployeePeriod(initialData) === targetPeriod;
+            if (!isSameRecordSlot && hasEvaluationInPeriod(employees, employeeName, targetFiscalYear, targetPeriod)) {
+              return "บุคคลนี้มีแบบประเมินในปีงบประมาณและรอบนี้แล้ว กรุณากลับไปหน้าแรกแล้วกดปุ่ม 'แก้ไข' ที่รายชื่อนั้นแทน";
             }
+
+            if (!String(kpiScores[0]?.name ?? '').trim()) return 'กรุณากรอกตัวชี้วัดในส่วนที่ 2 ข้อ 1';
 
             // ข้อที่เว้นว่างจะถูกนับเป็น 0 หรือใช้คะแนนฝั่งเดียว จึงต้องให้คะแนนครบก่อนบันทึก
             const scoreItems = [
@@ -3008,53 +3021,34 @@
             const missingLabels = (field) => scoreItems.filter(({ item }) => !(Number(item[field]) > 0)).map(({ label }) => label);
             const missingSelf = missingLabels('selfScore');
             const missingManager = missingLabels('managerScore');
+
             if (!isLoggedIn && missingSelf.length > 0) {
-              alert(`กรุณาให้คะแนนประเมินตนเองให้ครบทุกข้อ\nยังขาด: ${missingSelf.join(', ')}`);
-              return;
+              return `กรุณาให้คะแนนประเมินตนเองให้ครบทุกข้อ ยังขาด: ${missingSelf.join(', ')}`;
             }
-            if (isLoggedIn && missingManager.length > 0 && missingManager.length < scoreItems.length) {
-              alert(`กรุณาให้คะแนนหัวหน้าประเมินให้ครบทุกข้อ\nยังขาด: ${missingManager.join(', ')}`);
-              return;
-            }
-            if (isLoggedIn && missingManager.length === scoreItems.length && missingSelf.length === scoreItems.length) {
-              alert('กรุณาให้คะแนนอย่างน้อยหนึ่งฝั่งให้ครบก่อนบันทึก');
-              return;
+            if (isLoggedIn) {
+              // หัวหน้าเว้นคะแนนทั้งหมดได้กรณีเดียว คือเปิดแบบประเมินเดิมมาเพื่อตั้งรหัสแก้ไขให้เท่านั้น
+              const isOnlySettingCode = !!initialData && !!formData.newEditCode && missingManager.length === scoreItems.length;
+              if (missingManager.length > 0 && !isOnlySettingCode) {
+                return `กรุณาให้คะแนนหัวหน้าประเมินให้ครบทุกข้อ ยังขาด: ${missingManager.join(', ')}`;
+              }
+              if (formData.newEditCode && String(formData.newEditCode).trim().length < 4) {
+                return 'รหัสแก้ไขใหม่ต้องมีอย่างน้อย 4 ตัวอักษร';
+              }
+              if (hasNonEnglishChars(formData.newEditCode)) return NON_ENGLISH_CODE_MESSAGE;
             }
 
             if (!isLoggedIn && !initialData) {
-              if (String(formData.editCode).trim().length < 4) {
-                alert('กรุณาตั้งรหัสแก้ไขอย่างน้อย 4 ตัวอักษร');
-                return;
-              }
-              if (hasNonEnglishChars(formData.editCode)) {
-                alert(NON_ENGLISH_CODE_MESSAGE);
-                return;
-              }
-              if (formData.editCode !== formData.editCodeConfirm) {
-                alert('รหัสแก้ไขทั้งสองช่องไม่ตรงกัน');
-                return;
-              }
+              if (String(formData.editCode).trim().length < 4) return 'กรุณาตั้งรหัสแก้ไขอย่างน้อย 4 ตัวอักษร';
+              if (hasNonEnglishChars(formData.editCode)) return NON_ENGLISH_CODE_MESSAGE;
+              if (formData.editCode !== formData.editCodeConfirm) return 'รหัสแก้ไขทั้งสองช่องไม่ตรงกัน';
             }
-            if (isLoggedIn && formData.newEditCode && String(formData.newEditCode).trim().length < 4) {
-              alert('รหัสแก้ไขใหม่ต้องมีอย่างน้อย 4 ตัวอักษร');
-              return;
-            }
-            if (isLoggedIn && hasNonEnglishChars(formData.newEditCode)) {
-              alert(NON_ENGLISH_CODE_MESSAGE);
-              return;
-            }
+            return null;
+          };
+          const validationError = getValidationError();
 
-            const targetFiscalYear = String(formData.fiscalYear || getCurrentFiscalYear());
-            const targetPeriod = formData.period || periodOptions[0];
-            // การแก้ไขที่ย้ายชื่อ/ปี/รอบ ต้องไม่ไปซ้ำกับแบบประเมินอีกครั้งของบุคคลเดียวกัน
-            const isSameRecordSlot = !!initialData
-              && normalizeName(getEmployeeName(initialData)) === employeeName
-              && getEmployeeFiscalYear(initialData) === targetFiscalYear
-              && getEmployeePeriod(initialData) === targetPeriod;
-            if (!isSameRecordSlot && hasEvaluationInPeriod(employees, employeeName, targetFiscalYear, targetPeriod)) {
-              alert("บุคคลนี้มีแบบประเมินในปีงบประมาณและรอบนี้แล้ว! กรุณากลับไปที่หน้าแรกแล้วกดปุ่ม 'แก้ไข' ที่รายชื่อนั้นแทน");
-              return;
-            }
+          const handleSubmit = (e) => {
+            e.preventDefault();
+            if (validationError) return;
 
             onSubmit({
               ...formData,
@@ -3199,7 +3193,7 @@
                                 <div className="flex gap-2">
                                   <span className="mt-2">{item.id}.</span>
                                   <div className="flex-1 relative">
-                                    <textarea value={item.name || ''} onChange={(e) => updateKpiName(item.id, e.target.value)} className="w-full border border-blue-300 rounded-md p-2 pr-8 bg-blue-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors" rows="3" placeholder="ระบุตัวชี้วัด..." />
+                                    <textarea value={item.name || ''} onChange={(e) => updateKpiName(item.id, e.target.value)} className="w-full border border-blue-300 rounded-md p-2 pr-8 bg-blue-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors placeholder:text-gray-400 placeholder:font-normal" rows="3" placeholder={KPI_1_EXAMPLE} aria-required="true" />
                                     <Edit3 className="w-4 h-4 text-blue-400 absolute right-2 top-2 pointer-events-none" />
                                     <p className="kpi-note text-xs font-medium text-red-600 mt-1">*** KPI หรืองานที่รับผิดชอบ ***</p>
                                   </div>
@@ -3382,11 +3376,17 @@
                   </div>
                 )}
 
+                {validationError && (
+                  <p className="form-missing text-sm text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-3" role="status">
+                    ยังบันทึกไม่ได้: {validationError}
+                  </p>
+                )}
+
                 <div className="flex justify-end gap-4 border-t pt-6">
                   <button type="button" onClick={onCancel} disabled={isSaving} className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium disabled:opacity-60">
                     ยกเลิก
                   </button>
-                  <button type="submit" disabled={isSaving} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-md disabled:opacity-60 disabled:cursor-wait">
+                  <button type="submit" disabled={isSaving || !!validationError} className={`px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-md disabled:opacity-50 ${isSaving ? 'disabled:cursor-wait' : 'disabled:cursor-not-allowed'}`}>
                     <Save className="w-5 h-5" /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
                   </button>
                 </div>
