@@ -529,11 +529,12 @@
             body.modern-ui .data-panel table.is-admin th:nth-child(8) { width: 9%; }
             body.modern-ui .data-panel table.is-admin th:nth-child(9) { width: 15%; }
 
-            body.modern-ui .data-panel table.is-public th:nth-child(1) { width: 30%; }
-            body.modern-ui .data-panel table.is-public th:nth-child(2) { width: 20%; }
-            body.modern-ui .data-panel table.is-public th:nth-child(3) { width: 26%; }
-            body.modern-ui .data-panel table.is-public th:nth-child(4) { width: 12%; }
-            body.modern-ui .data-panel table.is-public th:nth-child(5) { width: 12%; }
+            body.modern-ui .data-panel table.is-public th:nth-child(1) { width: 26%; }
+            body.modern-ui .data-panel table.is-public th:nth-child(2) { width: 16%; }
+            body.modern-ui .data-panel table.is-public th:nth-child(3) { width: 22%; }
+            body.modern-ui .data-panel table.is-public th:nth-child(4) { width: 10%; }
+            body.modern-ui .data-panel table.is-public th:nth-child(5) { width: 11%; }
+            body.modern-ui .data-panel table.is-public th:nth-child(6) { width: 15%; }
 
             body.modern-ui .data-panel thead {
                 background: #f7f9fc;
@@ -1658,6 +1659,40 @@
                 margin-bottom: 18px !important;
             }
         }
+
+        /* ปุ่มแก้ไขของผู้รับการประเมิน และป้ายล็อกเมื่อหัวหน้าประเมินแล้ว */
+        @media screen {
+            body.modern-ui .data-panel td.cell-actions > .self-edit-actions {
+                justify-content: center;
+            }
+            body.modern-ui .data-panel td.cell-actions button.self-edit-btn {
+                display: inline-flex;
+                align-items: center;
+                justify-content: center;
+                gap: 6px;
+                width: auto;
+                min-height: 40px;
+                padding: 6px 14px;
+                border: 1px solid #bfdbfe;
+                border-radius: 8px;
+                background: #eff6ff;
+                color: #1d4ed8;
+                font-weight: 500;
+                white-space: nowrap;
+            }
+            body.modern-ui .data-panel td.cell-actions button.self-edit-btn:hover {
+                background: #dbeafe;
+            }
+            body.modern-ui .self-edit-locked {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                min-height: 40px;
+                color: #64748b;
+                font-size: 13px;
+                white-space: nowrap;
+            }
+        }
     </style>
 </head>
 <body class="bg-gray-50 modern-ui">
@@ -2232,6 +2267,19 @@
             loadRequestRef.current++;
 
             try {
+              // หัวหน้าอาจลงคะแนนระหว่างที่เปิดฟอร์มค้างไว้ จึงตรวจกับฐานข้อมูลล่าสุดก่อนบันทึก
+              // มิฉะนั้นการบันทึกของผู้รับการประเมินจะเขียนทับคะแนนหัวหน้า
+              if (!isLoggedIn) {
+                const latestRows = await fetchEmployeesFromDb();
+                if (checkManagerEvaluated(latestRows.find(e => e.id === recordToSave.id))) {
+                  setEmployees(latestRows);
+                  setCurrentEval(null);
+                  setCurrentView('dashboard');
+                  alert('หัวหน้าประเมินแบบฟอร์มนี้แล้ว จึงไม่สามารถแก้ไขได้ และการแก้ไขครั้งนี้ยังไม่ถูกบันทึก');
+                  return;
+                }
+              }
+
               showToast('กำลังบันทึกข้อมูลไปยัง Google Sheets...');
               await fetch(GOOGLE_SHEET_WEBAPP_URL, {
                 method: 'POST',
@@ -2497,7 +2545,7 @@
                     <p className="hero-eyebrow">ปีงบประมาณ {getCurrentFiscalYear()} · {getPeriodLabel(getCurrentPeriod())}</p>
                     <h1 className="hero-title">{isLoggedIn ? 'ภาพรวมผลการประเมิน' : 'แบบประเมินตนเอง'}</h1>
                     <p className="hero-text">
-                      {isLoggedIn ? 'ติดตามความคืบหน้าและผลคะแนนของบุคลากร แยกตามการประเมินครั้งที่ 1 และครั้งที่ 2' : 'เลือกรอบการประเมินแล้วให้คะแนนตนเอง จากนั้นหัวหน้าผู้ประเมินจะเป็นผู้สรุปผล'}
+                      {isLoggedIn ? 'ติดตามความคืบหน้าและผลคะแนนของบุคลากร แยกตามการประเมินครั้งที่ 1 และครั้งที่ 2' : 'เลือกรอบการประเมินแล้วให้คะแนนตนเอง แก้ไขได้จนกว่าหัวหน้าผู้ประเมินจะลงคะแนน จากนั้นหัวหน้าจะเป็นผู้สรุปผล'}
                     </p>
                   </div>
                   <button onClick={onNew} className="hero-cta">
@@ -2622,6 +2670,7 @@
                               <th className="p-4 font-medium text-center">จัดการ</th>
                             </>
                           )}
+                          {!isLoggedIn && <th className="p-4 font-medium text-center">การแก้ไข</th>}
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
@@ -2694,12 +2743,28 @@
                                   </td>
                                 </>
                               )}
+
+                              {!isLoggedIn && (
+                                <td className="cell-actions p-4 text-center">
+                                  <div className="self-edit-actions flex justify-center">
+                                    {isEvaluated ? (
+                                      <span className="self-edit-locked" title="หัวหน้าประเมินแล้ว ไม่สามารถแก้ไขได้">
+                                        <Lock className="w-4 h-4" /> หัวหน้าประเมินแล้ว
+                                      </span>
+                                    ) : (
+                                      <button type="button" onClick={() => onEdit(emp)} className="self-edit-btn" aria-label={`แก้ไขแบบประเมินของ ${getEmployeeName(emp)}`}>
+                                        <Edit className="w-4 h-4" /> แก้ไข
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              )}
                             </tr>
                           );
                         })}
                         {items.length === 0 && (
                           <tr>
-                            <td colSpan={isLoggedIn ? 9 : 5} className="p-8 text-center text-gray-500">
+                            <td colSpan={isLoggedIn ? 9 : 6} className="p-8 text-center text-gray-500">
                               ไม่พบข้อมูลการประเมินในรอบนี้
                             </td>
                           </tr>
