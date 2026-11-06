@@ -526,12 +526,12 @@
             }
 
             body.modern-ui .data-panel table.is-admin th:nth-child(1) { width: 6%; }
-            body.modern-ui .data-panel table.is-admin th:nth-child(2) { width: 17%; }
+            body.modern-ui .data-panel table.is-admin th:nth-child(2) { width: 16%; }
             body.modern-ui .data-panel table.is-admin th:nth-child(3) { width: 11%; }
             body.modern-ui .data-panel table.is-admin th:nth-child(4) { width: 11%; }
-            body.modern-ui .data-panel table.is-admin th:nth-child(5) { width: 9%; }
-            body.modern-ui .data-panel table.is-admin th:nth-child(6) { width: 9%; }
-            body.modern-ui .data-panel table.is-admin th:nth-child(7) { width: 11%; }
+            body.modern-ui .data-panel table.is-admin th:nth-child(5) { width: 8%; }
+            body.modern-ui .data-panel table.is-admin th:nth-child(6) { width: 10%; }
+            body.modern-ui .data-panel table.is-admin th:nth-child(7) { width: 12%; }
             body.modern-ui .data-panel table.is-admin th:nth-child(8) { width: 10%; }
             body.modern-ui .data-panel table.is-admin th:nth-child(9) { width: 16%; }
 
@@ -556,6 +556,7 @@
             body.modern-ui .data-panel td {
                 padding: 12px;
                 font-size: 14px;
+                overflow-wrap: anywhere;
             }
 
             body.modern-ui .data-panel td:last-child > .flex {
@@ -629,9 +630,24 @@
             }
 
             body.modern-ui .score-value {
+                align-self: center;
                 font-weight: 600;
                 color: var(--ui-ink);
                 font-variant-numeric: tabular-nums;
+            }
+
+            /* สีคะแนน 10 อันดับแรก ไล่จากเข้มไปอ่อนตามอันดับ */
+            body.modern-ui .score-cell.is-top .score-value {
+                width: 100%;
+                padding: 3px 6px;
+                border-radius: 8px;
+                text-align: center;
+                color: var(--top-fg);
+                background: var(--top-bg);
+            }
+
+            body.modern-ui .score-cell.is-top .meter > i {
+                background: var(--top-bg);
             }
 
             body.modern-ui .grade-pill {
@@ -1272,7 +1288,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect } = React;
+        const { useState, useEffect, useRef } = React;
 
         // ==========================================
         // ไอคอนทั้งหมด
@@ -1334,10 +1350,31 @@
           return fiscalYearOptions.includes(yearText) ? yearText : getCurrentFiscalYear();
         };
 
+        // ชีตไม่มีคอลัมน์ปีงบประมาณ จึงเก็บไว้ในรายการแรกของ kpiData ซึ่งบันทึกลงฐานข้อมูลอยู่แล้ว
+        const withStoredFiscalYear = (kpiData, fiscalYear) => kpiData.map((item, index) => index === 0 ? { ...item, fiscalYear } : item);
+
         const getEmployeeFiscalYear = (emp) => {
-          const year = String(emp?.fiscalYear || emp?.budgetYear || emp?.year || '').trim();
+          const storedYear = Array.isArray(emp?.kpiData) ? emp.kpiData[0]?.fiscalYear : '';
+          const year = String(emp?.fiscalYear || emp?.budgetYear || emp?.year || storedYear || '').trim();
           return fiscalYearOptions.includes(year) ? year : inferFiscalYearFromDate(emp?.date);
         };
+
+        // แปลงวันที่จากฐานข้อมูล (เช่น 2026-10-19T17:00:00.000Z) เป็นวันที่ไทยแบบสั้น
+        const formatThaiDate = (value) => {
+          const date = new Date(value);
+          if (!value || Number.isNaN(date.getTime())) return value || '';
+          return date.toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' });
+        };
+
+        // สีคะแนน 10 อันดับแรก ไล่จากเข้มไปอ่อนตามอันดับ
+        const TOP_SCORE_COLORS = [
+          ['#1e3a8a', '#ffffff'], ['#1d4ed8', '#ffffff'], ['#2563eb', '#ffffff'], ['#0369a1', '#ffffff'], ['#0e7490', '#ffffff'],
+          ['#06b6d4', '#0f1c33'], ['#22d3ee', '#0f1c33'], ['#67e8f9', '#0f1c33'], ['#a5f3fc', '#0f1c33'], ['#cffafe', '#0f1c33']
+        ];
+
+        const getTopScoreStyle = (index) => TOP_SCORE_COLORS[index]
+          ? { '--top-bg': TOP_SCORE_COLORS[index][0], '--top-fg': TOP_SCORE_COLORS[index][1] }
+          : undefined;
 
         const getEmployeePeriod = (emp) => emp?.period || periodOptions[0];
 
@@ -1390,6 +1427,43 @@
 
           return getEmployeeName(a).localeCompare(getEmployeeName(b), 'th');
         });
+
+        const isDatabaseConfigured = !!GOOGLE_SHEET_WEBAPP_URL && GOOGLE_SHEET_WEBAPP_URL !== "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE";
+
+        // อ่านข้อมูลล่าสุดจากฐานข้อมูล ถ้ามีแถว id ซ้ำจะใช้แถวล่างสุดของชีต
+        const fetchEmployeesFromDb = async () => {
+          const response = await fetch(`${GOOGLE_SHEET_WEBAPP_URL}?t=${Date.now()}`, { cache: 'no-store' });
+          const data = await response.json();
+          if (!Array.isArray(data)) throw new Error('Unexpected database response');
+          const rowsById = new Map();
+          data.forEach((emp, index) => rowsById.set(emp.id ?? `row-${index}`, emp));
+          return [...rowsById.values()].map(emp => ({
+            ...emp,
+            fiscalYear: getEmployeeFiscalYear(emp),
+            period: getEmployeePeriod(emp)
+          })).reverse();
+        };
+
+        const isSameDbText = (a, b) => String(a ?? '').trim() === String(b ?? '').trim();
+
+        const isRecordInDb = (row, record) => !!row
+          && isSameDbText(row.name, record.name)
+          && isSameDbText(row.position, record.position)
+          && isSameDbText(row.period, record.period)
+          && isSameDbText(row.comments, record.comments)
+          && isSameDbText(row.evaluatorName, record.evaluatorName)
+          && getEmployeeFiscalYear(row) === record.fiscalYear
+          && Math.abs(getEmployeeScore(row) - getEmployeeScore(record)) < 0.01;
+
+        // รอฐานข้อมูลอัปเดตสูงสุด 4 ครั้ง คืนรายการล่าสุดเมื่อพบข้อมูลที่บันทึก ไม่พบคืน null
+        const confirmRecordSaved = async (record) => {
+          for (const waitMs of [0, 1000, 2000, 2000]) {
+            if (waitMs) await new Promise(resolve => setTimeout(resolve, waitMs));
+            const rows = await fetchEmployeesFromDb();
+            if (isRecordInDb(rows.find(emp => emp.id === record.id), record)) return rows;
+          }
+          return null;
+        };
 
         const filterEmployeesByReport = (list, filters) => list.filter(emp => {
           const matchFiscalYear = filters.fiscalYear === 'all' || getEmployeeFiscalYear(emp) === filters.fiscalYear;
@@ -1627,30 +1701,47 @@
           const [toastMessage, setToastMessage] = useState('');
           const [itemToDelete, setItemToDelete] = useState(null);
           const [isLoadingData, setIsLoadingData] = useState(true);
+          const [isSaving, setIsSaving] = useState(false);
+          const isSavingRef = useRef(false);
+          const loadRequestRef = useRef(0);
+
+          // ดึงข้อมูลล่าสุดจากฐานข้อมูล ไม่ทับข้อมูลระหว่างบันทึก และไม่ใช้ผลของคำขอที่เก่ากว่า
+          const refreshEmployees = async () => {
+            if (!isDatabaseConfigured || isSavingRef.current) return;
+            const requestId = ++loadRequestRef.current;
+            const rows = await fetchEmployeesFromDb();
+            if (requestId === loadRequestRef.current && !isSavingRef.current) setEmployees(rows);
+          };
 
           // ดึงข้อมูลตอนเปิดหน้าเว็บครั้งแรก
           useEffect(() => {
             const fetchInitialData = async () => {
-              if (GOOGLE_SHEET_WEBAPP_URL && GOOGLE_SHEET_WEBAPP_URL !== "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE") {
-                try {
-                  const response = await fetch(GOOGLE_SHEET_WEBAPP_URL);
-                  const data = await response.json();
-                  if (Array.isArray(data)) {
-                    const normalizedData = data.map(emp => ({
-                      ...emp,
-                      fiscalYear: getEmployeeFiscalYear(emp),
-                      period: getEmployeePeriod(emp)
-                    }));
-                    setEmployees(normalizedData.reverse()); // ใช้ข้อมูลล่าสุดเป็นฐาน หน้า admin/ใบพิมพ์รวมจะเรียงตามคะแนนตอนแสดงผล
-                  }
-                } catch (error) {
-                  console.error("Fetch Error:", error);
-                  showToast("เชื่อมต่อฐานข้อมูลล้มเหลว หรือยังไม่มีข้อมูล");
-                }
+              try {
+                await refreshEmployees();
+              } catch (error) {
+                console.error("Fetch Error:", error);
+                showToast("เชื่อมต่อฐานข้อมูลล้มเหลว หรือยังไม่มีข้อมูล");
               }
               setIsLoadingData(false);
             };
             fetchInitialData();
+          }, []);
+
+          // กลับมาหน้าแรกหรือสลับกลับมาที่แท็บนี้ ให้แสดงข้อมูลล่าสุดเสมอ
+          useEffect(() => {
+            if (currentView === 'dashboard' && !isLoadingData) {
+              refreshEmployees().catch(error => console.error("Refresh Error:", error));
+            }
+          }, [currentView]);
+
+          useEffect(() => {
+            const handleVisibilityChange = () => {
+              if (document.visibilityState === 'visible') {
+                refreshEmployees().catch(error => console.error("Refresh Error:", error));
+              }
+            };
+            document.addEventListener('visibilitychange', handleVisibilityChange);
+            return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
           }, []);
 
           const showToast = (msg) => {
@@ -1679,6 +1770,7 @@
                       employeeName: targetName
                     }),
                   });
+                  await refreshEmployees();
                 } catch (error) {
                   console.error('Delete error:', error);
                 }
@@ -1687,10 +1779,9 @@
           };
 
           const handleSaveEvaluation = async (evalData) => {
-            if (!evalData) return;
+            // กันการกดบันทึกซ้ำระหว่างรอ ซึ่งทำให้เกิดแถวซ้ำในฐานข้อมูล
+            if (!evalData || isSavingRef.current) return;
 
-            const isExisting = employees.some(e => e.id === evalData.id);
-            
             const recordToSave = {
               ...evalData,
               id: evalData.id || Date.now(),
@@ -1699,20 +1790,19 @@
               period: getEmployeePeriod(evalData),
               date: evalData.date || new Date().toISOString().split('T')[0]
             };
-            
-            if (isExisting) {
-              setEmployees(employees.map(e => e.id === evalData.id ? recordToSave : e));
-            } else {
-              setEmployees([recordToSave, ...employees]);
-            }
-            
-            setCurrentEval(recordToSave);
-            
-            if (GOOGLE_SHEET_WEBAPP_URL === "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE" || !GOOGLE_SHEET_WEBAPP_URL) {
+
+            if (!isDatabaseConfigured) {
+               const isExisting = employees.some(e => e.id === recordToSave.id);
+               setEmployees(isExisting ? employees.map(e => e.id === recordToSave.id ? recordToSave : e) : [recordToSave, ...employees]);
+               setCurrentEval(recordToSave);
                showToast('บันทึกสำเร็จ (ระบบจำลองข้อมูล)');
                setCurrentView('dashboard');
                return;
             }
+
+            isSavingRef.current = true;
+            setIsSaving(true);
+            loadRequestRef.current++;
 
             try {
               showToast('กำลังบันทึกข้อมูลไปยัง Google Sheets...');
@@ -1725,12 +1815,23 @@
                   ...recordToSave
                 }),
               });
-              showToast('บันทึกข้อมูลสำเร็จ!');
-              setCurrentView('dashboard');
+
+              // คำขอแบบ no-cors อ่านผลตอบกลับไม่ได้ จึงอ่านฐานข้อมูลกลับมายืนยันว่าบันทึกจริง
+              const rows = await confirmRecordSaved(recordToSave);
+              if (rows) {
+                setEmployees(rows);
+                setCurrentEval(rows.find(e => e.id === recordToSave.id) || recordToSave);
+                showToast('บันทึกลงฐานข้อมูลสำเร็จ!');
+                setCurrentView('dashboard');
+              } else {
+                alert('ระบบยังไม่พบข้อมูลที่แก้ไขในฐานข้อมูล ข้อมูลในฟอร์มยังอยู่ครบ กรุณากด "บันทึกข้อมูล" อีกครั้ง');
+              }
             } catch (error) {
               console.error(error);
-              showToast('บันทึกสำเร็จ (แต่ขัดข้องในการส่งไป G-Sheets)');
-              setCurrentView('dashboard');
+              alert('เชื่อมต่อฐานข้อมูลไม่สำเร็จ ข้อมูลในฟอร์มยังอยู่ครบ กรุณาตรวจสอบอินเทอร์เน็ตแล้วกด "บันทึกข้อมูล" อีกครั้ง');
+            } finally {
+              isSavingRef.current = false;
+              setIsSaving(false);
             }
           };
 
@@ -1855,7 +1956,8 @@
                       isLoggedIn={isLoggedIn}
                       initialData={currentEval}
                       employees={employees}
-                      onSubmit={handleSaveEvaluation} 
+                      onSubmit={handleSaveEvaluation}
+                      isSaving={isSaving}
                       onCancel={() => setCurrentView('dashboard')} 
                     />
                   )}
@@ -2042,7 +2144,7 @@
                   </div>
                   {isLoggedIn && (
                     <p className="text-xs text-slate-500 mt-2">
-                      แยกตารางตามการประเมินครั้งที่ 1 และครั้งที่ 2 แต่ละครั้งเรียงคะแนนรวมจากมากสุดไปน้อยสุด
+                      แยกตารางตามการประเมินครั้งที่ 1 และครั้งที่ 2 เรียงคะแนนจากมากไปน้อย สีคะแนนไล่จากเข้มไปอ่อนตาม 10 อันดับแรกของแต่ละครั้ง
                     </p>
                   )}
                 </div>
@@ -2112,13 +2214,13 @@
                               <td className="p-4 text-gray-600">{emp.position || ''}</td>
                               <td className="p-4 text-gray-600">{emp.department || ''}</td>
                               <td className="p-4 text-center font-medium text-blue-700">{getEmployeeFiscalYear(emp)}</td>
-                              <td className="p-4 text-gray-600 whitespace-nowrap">{emp.date || ''}</td>
+                              <td className="p-4 text-gray-600">{formatThaiDate(emp.date)}</td>
 
                               {isLoggedIn && (
                                 <>
                                   <td className="p-4 text-center font-bold text-blue-600">
                                     {isEvaluated ? (
-                                      <span className="score-cell">
+                                      <span className={`score-cell ${index < TOP_SCORE_COLORS.length ? 'is-top' : ''}`} style={getTopScoreStyle(index)}>
                                         <span className="score-value">{formatScore(getEmployeeScore(emp))}%</span>
                                         <span className="meter" aria-hidden="true"><i style={{ width: `${Math.min(getEmployeeScore(emp), 100)}%` }}></i></span>
                                       </span>
@@ -2209,7 +2311,9 @@
           );
         }
 
-        function EvaluationForm({ isLoggedIn, initialData, employees, onSubmit, onCancel }) {
+        function EvaluationForm({ isLoggedIn, initialData, employees, onSubmit, onCancel, isSaving }) {
+          // ใช้ id เดิมเมื่อกดบันทึกซ้ำหลังบันทึกไม่สำเร็จ เพื่อไม่ให้เกิดแถวซ้ำ
+          const newRecordId = useRef(Date.now());
           const [formData, setFormData] = useState({
             employeeName: '',
             position: 'พยาบาลวิชาชีพ',
@@ -2271,8 +2375,9 @@
 
             onSubmit({
               ...formData,
-              id: initialData?.id || Date.now(),
-              kpiData: kpiScores,
+              fiscalYear: targetFiscalYear,
+              id: initialData?.id || newRecordId.current,
+              kpiData: withStoredFiscalYear(kpiScores, targetFiscalYear),
               behaviorData: behaviorScores,
               kpiScoreFinal: kpiPercentage,
               behaviorScoreFinal: behaviorPercentage,
@@ -2571,11 +2676,11 @@
                 )}
 
                 <div className="flex justify-end gap-4 border-t pt-6">
-                  <button type="button" onClick={onCancel} className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium">
+                  <button type="button" onClick={onCancel} disabled={isSaving} className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 font-medium disabled:opacity-60">
                     ยกเลิก
                   </button>
-                  <button type="submit" className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-md">
-                    <Save className="w-5 h-5" /> บันทึกข้อมูล
+                  <button type="submit" disabled={isSaving} className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium flex items-center gap-2 shadow-md disabled:opacity-60 disabled:cursor-wait">
+                    <Save className="w-5 h-5" /> {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
                   </button>
                 </div>
               </div>
