@@ -21,7 +21,7 @@
     <!-- ฟอนต์สำหรับหน้าจอ (ใบพิมพ์ยังใช้ TH Sarabun ตามเดิม) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&display=swap">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap">
 
     <style>
         /* สไตล์พิเศษสำหรับการสั่งพิมพ์กระดาษให้ออกมาเป็น A4 สมบูรณ์แบบ */
@@ -51,9 +51,8 @@
                 break-inside: avoid; 
             }
         }
-        @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap');
-        /* กำหนดฟอนต์หลักเป็น TH Sarabun PSK ตามหลักสารบรรณ */
-        body { font-family: 'TH Sarabun PSK', 'Sarabun', sans-serif; }
+        /* กำหนดฟอนต์หลักเป็น TH Sarabun PSK ตามหลักสารบรรณ (ชื่อฟอนต์ที่ติดตั้งจริงคือ TH SarabunPSK) */
+        body { font-family: 'TH SarabunPSK', 'TH Sarabun PSK', 'Sarabun', sans-serif; }
 
         :root {
             --ui-bg: #f2f5fb;
@@ -520,15 +519,15 @@
                 table-layout: fixed;
             }
 
-            body.modern-ui .data-panel table.is-admin th:nth-child(1) { width: 6%; }
-            body.modern-ui .data-panel table.is-admin th:nth-child(2) { width: 16%; }
+            body.modern-ui .data-panel table.is-admin th:nth-child(1) { width: 5%; }
+            body.modern-ui .data-panel table.is-admin th:nth-child(2) { width: 19.5%; }
             body.modern-ui .data-panel table.is-admin th:nth-child(3) { width: 11%; }
-            body.modern-ui .data-panel table.is-admin th:nth-child(4) { width: 11%; }
-            body.modern-ui .data-panel table.is-admin th:nth-child(5) { width: 8%; }
+            body.modern-ui .data-panel table.is-admin th:nth-child(4) { width: 12.5%; }
+            body.modern-ui .data-panel table.is-admin th:nth-child(5) { width: 7.5%; }
             body.modern-ui .data-panel table.is-admin th:nth-child(6) { width: 10%; }
-            body.modern-ui .data-panel table.is-admin th:nth-child(7) { width: 12%; }
-            body.modern-ui .data-panel table.is-admin th:nth-child(8) { width: 10%; }
-            body.modern-ui .data-panel table.is-admin th:nth-child(9) { width: 16%; }
+            body.modern-ui .data-panel table.is-admin th:nth-child(7) { width: 10.5%; }
+            body.modern-ui .data-panel table.is-admin th:nth-child(8) { width: 9%; }
+            body.modern-ui .data-panel table.is-admin th:nth-child(9) { width: 15%; }
 
             body.modern-ui .data-panel table.is-public th:nth-child(1) { width: 30%; }
             body.modern-ui .data-panel table.is-public th:nth-child(2) { width: 20%; }
@@ -571,9 +570,31 @@
             }
 
             body.modern-ui .person-cell {
-                display: inline-flex;
+                display: flex;
                 align-items: center;
                 gap: 10px;
+                min-width: 0;
+            }
+
+            body.modern-ui .person-name {
+                min-width: 0;
+                line-height: 1.4;
+            }
+
+            /* ชื่อ-สกุลตัดบรรทัดที่ช่องว่างระหว่างคำเท่านั้น ไม่ตัดกลางนามสกุล */
+            body.modern-ui .person-name-part {
+                white-space: nowrap;
+            }
+
+            body.modern-ui .data-panel td[data-label="วันที่ประเมิน"],
+            body.modern-ui .data-panel th {
+                white-space: nowrap;
+            }
+
+            body.modern-ui .data-panel table.is-admin td[data-label="ตำแหน่ง"],
+            body.modern-ui .data-panel table.is-admin td[data-label="แผนก/กลุ่มงาน"] {
+                font-size: 13px;
+                line-height: 1.4;
             }
 
             body.modern-ui .person-avatar {
@@ -1258,6 +1279,41 @@
                     text-align: left;
                 }
 
+                /* ไม่มีช่องอันดับ (ยังไม่เข้าสู่ระบบ): ให้ชื่อเต็มแถว ไม่ถูกบีบจนกว้างเป็น 0 */
+                body.modern-ui .data-panel table.is-public tbody > tr > td.cell-name {
+                    flex: 0 0 100%;
+                }
+
+                /* หัวการ์ด: ชื่อเด่นชัด แล้วคั่นด้วยเส้นก่อนรายละเอียด */
+                body.modern-ui .data-panel .person-cell {
+                    gap: 12px;
+                    width: 100%;
+                }
+
+                body.modern-ui .data-panel .person-avatar {
+                    width: 40px;
+                    height: 40px;
+                    font-size: 16px;
+                }
+
+                body.modern-ui .data-panel .person-name {
+                    font-size: 16px;
+                    font-weight: 600;
+                    color: var(--ui-ink);
+                    text-align: left;
+                }
+
+                body.modern-ui .data-panel tbody > tr > td[data-label="ตำแหน่ง"] {
+                    margin-top: 8px;
+                    padding-top: 12px;
+                    border-top: 1px solid var(--ui-line);
+                }
+
+                body.modern-ui .data-panel tbody > tr > td[data-label] {
+                    font-size: 14px;
+                    line-height: 1.45;
+                }
+
                 body.modern-ui .data-panel tbody > tr > td.cell-actions {
                     display: block;
                     margin-top: 6px;
@@ -1472,8 +1528,6 @@
                 margin-top: 22px !important;
             }
             .print-fit-two-pages {
-                max-height: 560mm;
-                overflow: hidden !important;
                 page-break-after: avoid;
                 break-after: avoid-page;
             }
@@ -1665,10 +1719,13 @@
           return fiscalYearOptions.includes(yearText) ? yearText : fiscalYearOptions[1];
         };
 
-        const inferFiscalYearFromDate = (dateValue) => {
+        const inferFiscalYearFromDate = (dateValue, period) => {
           const date = dateValue ? new Date(dateValue) : new Date();
           if (Number.isNaN(date.getTime())) return getCurrentFiscalYear();
-          const thaiFiscalYear = date.getFullYear() + 543 + (date.getMonth() >= 9 ? 1 : 0);
+          const month = date.getMonth();
+          // ครั้งที่ 2 (เม.ย. - ก.ย.) มักประเมินหลังจบรอบ เช่น ต.ค. จึงยังเป็นปีงบประมาณที่เพิ่งสิ้นสุด
+          const yearOffset = period === periodOptions[1] ? (month < 3 ? -1 : 0) : (month >= 9 ? 1 : 0);
+          const thaiFiscalYear = date.getFullYear() + 543 + yearOffset;
           const yearText = String(thaiFiscalYear);
           return fiscalYearOptions.includes(yearText) ? yearText : getCurrentFiscalYear();
         };
@@ -1679,7 +1736,7 @@
         const getEmployeeFiscalYear = (emp) => {
           const storedYear = Array.isArray(emp?.kpiData) ? emp.kpiData[0]?.fiscalYear : '';
           const year = String(emp?.fiscalYear || emp?.budgetYear || emp?.year || storedYear || '').trim();
-          return fiscalYearOptions.includes(year) ? year : inferFiscalYearFromDate(emp?.date);
+          return fiscalYearOptions.includes(year) ? year : inferFiscalYearFromDate(emp?.date, emp?.period);
         };
 
         // แปลงวันที่จากฐานข้อมูล (เช่น 2026-10-19T17:00:00.000Z) เป็นวันที่ไทยแบบสั้น
@@ -1717,7 +1774,11 @@
           'พอใช้': 'grade-fair'
         }[grade] || 'grade-poor');
 
-        const getNameInitial = (name) => (String(name).match(/[ก-ฮA-Za-z]/) || ['?'])[0];
+        // ใช้อักษรแรกของชื่อจริง ไม่ใช้คำนำหน้า มิฉะนั้นวงกลมจะเป็น "น" เกือบทุกคน
+        const getNameInitial = (name) => {
+          const withoutTitle = String(name).trim().replace(/^(นางสาว|น\.ส\.|นาง|นาย|ว่าที่\s*ร\.ต\.(หญิง)?)\s*/, '');
+          return (withoutTitle.match(/[ก-ฮA-Za-z]/) || String(name).match(/[ก-ฮA-Za-z]/) || ['?'])[0];
+        };
 
         const checkManagerEvaluated = (emp) => {
           if (!emp) return false;
@@ -1727,6 +1788,9 @@
         };
 
         const getEmployeeName = (emp) => emp?.name || emp?.employeeName || 'ไม่ระบุชื่อ';
+
+        // ตัดช่องว่างส่วนเกิน เพื่อไม่ให้ชื่อเดียวกันที่พิมพ์เว้นวรรคต่างกันกลายเป็นคนละคน
+        const normalizeName = (name) => String(name ?? '').trim().replace(/\s+/g, ' ');
 
         const getEmployeeScore = (emp) => {
           const score = Number(emp?.totalScore);
@@ -1795,17 +1859,29 @@
         });
 
         // แยกรายชื่อตามรอบการประเมิน แต่ละรอบเรียงคะแนนและจัดอันดับแยกกัน
+        // ถ้ามีข้อมูลหลายปีงบประมาณ จะแยกตามปีด้วย เพื่อไม่ให้จัดอันดับข้ามปี
         const groupEmployeesByPeriod = (list, periodFilter) => {
           const otherPeriods = list.map(getEmployeePeriod).filter(period => !periodOptions.includes(period));
           const periods = periodFilter === 'all' ? [...new Set([...periodOptions, ...otherPeriods])] : [periodFilter];
-          return periods.map(period => ({
+          const years = [...new Set(list.map(getEmployeeFiscalYear))].sort((a, b) => Number(b) - Number(a));
+          if (years.length <= 1) {
+            return periods.map(period => ({
+              period,
+              fiscalYear: null,
+              items: sortEmployeesByScoreDesc(list.filter(emp => getEmployeePeriod(emp) === period))
+            }));
+          }
+          return years.flatMap(fiscalYear => periods.map(period => ({
             period,
-            items: sortEmployeesByScoreDesc(list.filter(emp => getEmployeePeriod(emp) === period))
-          }));
+            fiscalYear,
+            items: sortEmployeesByScoreDesc(list.filter(emp => getEmployeePeriod(emp) === period && getEmployeeFiscalYear(emp) === fiscalYear))
+          }))).filter(group => group.items.length > 0);
         };
 
+        const getGroupTitle = ({ period, fiscalYear }) => fiscalYear ? `ปีงบประมาณ ${fiscalYear} ${period}` : period;
+
         const hasEvaluationInPeriod = (list, name, fiscalYear, period) => list.some(emp =>
-          (emp.name === name || emp.employeeName === name) && getEmployeeFiscalYear(emp) === fiscalYear && getEmployeePeriod(emp) === period
+          (normalizeName(emp.name) === normalizeName(name) || normalizeName(emp.employeeName) === normalizeName(name)) && getEmployeeFiscalYear(emp) === fiscalYear && getEmployeePeriod(emp) === period
         );
 
         const getResultText = (emp) => {
@@ -1974,8 +2050,8 @@
             const widths = [950, 2950, 2300, 700, 1138, 1600];
             const headers = ['ลำดับคะแนน', 'ชื่อ-สกุล', 'ตำแหน่ง', 'ปีงบฯ', 'ผลคะแนนรวม', 'ระดับ/สถานะ'];
 
-            const groupSections = groupEmployeesByPeriod(filtered, filters.period).flatMap(({ period, items }) => [
-              wordParagraph(period, { pt: 18, bold: true, before: 240, after: 60, keepNext: true }),
+            const groupSections = groupEmployeesByPeriod(filtered, filters.period).flatMap(({ period, fiscalYear, items }) => [
+              wordParagraph(getGroupTitle({ period, fiscalYear }), { pt: 18, bold: true, before: 240, after: 60, keepNext: true }),
               wordTable(widths, [
                 wordRow(wordHeaderCells(headers, widths), true),
                 ...(items.length > 0 ? items.map((emp, index) => {
@@ -2079,31 +2155,53 @@
           };
 
           const handleDeleteEvaluation = async () => {
-            if (itemToDelete) {
-              const targetId = itemToDelete.id;
-              const targetName = itemToDelete.name || itemToDelete.employeeName;
+            if (!itemToDelete || isSavingRef.current) return;
+            const targetId = itemToDelete.id;
+            const targetName = itemToDelete.name || itemToDelete.employeeName;
+            setItemToDelete(null);
 
+            if (!isDatabaseConfigured) {
               setEmployees(employees.filter(e => e.id !== targetId));
               showToast('ลบข้อมูลเรียบร้อยแล้ว');
-              setItemToDelete(null);
+              return;
+            }
 
-              if (GOOGLE_SHEET_WEBAPP_URL && GOOGLE_SHEET_WEBAPP_URL !== "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE") {
-                try {
-                  await fetch(GOOGLE_SHEET_WEBAPP_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                      action: 'delete',
-                      id: targetId,
-                      employeeName: targetName
-                    }),
-                  });
-                  await refreshEmployees();
-                } catch (error) {
-                  console.error('Delete error:', error);
-                }
+            isSavingRef.current = true;
+            setIsSaving(true);
+            loadRequestRef.current++;
+
+            try {
+              showToast('กำลังลบข้อมูล...');
+              await fetch(GOOGLE_SHEET_WEBAPP_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  action: 'delete',
+                  id: targetId,
+                  employeeName: targetName
+                }),
+              });
+
+              // คำขอแบบ no-cors อ่านผลตอบกลับไม่ได้ จึงอ่านฐานข้อมูลกลับมายืนยันว่าลบจริง
+              let rows = [];
+              for (const waitMs of [0, 1000, 2000, 2000]) {
+                if (waitMs) await new Promise(resolve => setTimeout(resolve, waitMs));
+                rows = await fetchEmployeesFromDb();
+                if (!rows.some(e => e.id === targetId)) break;
               }
+              setEmployees(rows);
+              if (rows.some(e => e.id === targetId)) {
+                alert('ระบบยังพบข้อมูลนี้ในฐานข้อมูล การลบอาจไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
+              } else {
+                showToast('ลบข้อมูลเรียบร้อยแล้ว');
+              }
+            } catch (error) {
+              console.error('Delete error:', error);
+              alert('เชื่อมต่อฐานข้อมูลไม่สำเร็จ ยังยืนยันการลบไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง');
+            } finally {
+              isSavingRef.current = false;
+              setIsSaving(false);
             }
           };
 
@@ -2215,7 +2313,7 @@
                   
                   <div className="flex items-center gap-4">
                     {isLoggedIn ? (
-                      <button onClick={() => setIsLoggedIn(false)} className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                      <button onClick={() => { setIsLoggedIn(false); setCurrentEval(null); setCurrentView('dashboard'); }} className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
                         <LogOut className="w-5 h-5" /> ออกจากระบบ (wee)
                       </button>
                     ) : (
@@ -2376,6 +2474,12 @@
           });
           const employeeGroups = groupEmployeesByPeriod(filteredEmployees, periodFilter);
 
+          // จัดอันดับจากรายชื่อทั้งรอบ ก่อนค้นหาหรือกรองสถานะ อันดับจึงไม่เปลี่ยนตามผลการค้นหา
+          const rankById = new Map();
+          groupEmployeesByPeriod(scopedEmployees, periodFilter).forEach(({ items }) => {
+            items.filter(checkManagerEvaluated).forEach((emp, index) => rankById.set(emp.id, index + 1));
+          });
+
           const evaluatedEmployees = scopedEmployees.filter(e => checkManagerEvaluated(e));
           const avgScore = evaluatedEmployees.length > 0 
             ? (evaluatedEmployees.reduce((sum, e) => sum + Number(e.totalScore || 0), 0) / evaluatedEmployees.length).toFixed(2)
@@ -2491,12 +2595,12 @@
                 </div>
               </div>
 
-              {employeeGroups.map(({ period, items }) => (
-                <div key={period} className="period-panel space-y-3">
+              {employeeGroups.map(({ period, fiscalYear, items }) => (
+                <div key={`${fiscalYear || ''}-${period}`} className="period-panel space-y-3">
                   <h3 className="period-heading">
                     <span className="period-heading-title">
                       <span className="period-heading-bar" aria-hidden="true"></span>
-                      การประเมิน{getPeriodLabel(period)}
+                      {fiscalYear ? `ปีงบประมาณ ${fiscalYear} ` : ''}การประเมิน{getPeriodLabel(period)}
                       {getPeriodRange(period) && <span className="period-heading-range">{getPeriodRange(period)}</span>}
                     </span>
                     <span className="period-heading-count">{items.length} รายการ</span>
@@ -2521,14 +2625,15 @@
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100">
-                        {items.map((emp, index) => {
+                        {items.map((emp) => {
                           const isEvaluated = checkManagerEvaluated(emp);
+                          const rank = rankById.get(emp.id);
                           return (
                             <tr key={emp.id} className="hover:bg-slate-50 transition-colors">
                               {isLoggedIn && (
                                 <td className="cell-rank p-4 text-center">
                                   {isEvaluated ? (
-                                    <span className={`rank-badge rank-${index + 1}`}>{index + 1}</span>
+                                    <span className={`rank-badge rank-${rank}`}>{rank}</span>
                                   ) : (
                                     <span className="text-gray-400">-</span>
                                   )}
@@ -2537,7 +2642,14 @@
                               <td className="cell-name p-4 font-semibold text-gray-800">
                                 <span className="person-cell">
                                   <span className="person-avatar" aria-hidden="true">{getNameInitial(getEmployeeName(emp))}</span>
-                                  {getEmployeeName(emp)}
+                                  <span className="person-name">
+                                    {normalizeName(getEmployeeName(emp)).split(' ').map((part, partIndex) => (
+                                      <React.Fragment key={partIndex}>
+                                        {partIndex > 0 && ' '}
+                                        <span className="person-name-part">{part}</span>
+                                      </React.Fragment>
+                                    ))}
+                                  </span>
                                 </span>
                               </td>
                               <td data-label="ตำแหน่ง" className="p-4 text-gray-600">{emp.position || ''}</td>
@@ -2549,7 +2661,7 @@
                                 <>
                                   <td data-label="คะแนนเฉลี่ยรวม" className="p-4 text-center font-bold text-blue-600">
                                     {isEvaluated ? (
-                                      <span className={`score-cell ${index < TOP_SCORE_COLORS.length ? 'is-top' : ''}`} style={getTopScoreStyle(index)}>
+                                      <span className={`score-cell ${rank <= TOP_SCORE_COLORS.length ? 'is-top' : ''}`} style={getTopScoreStyle(rank - 1)}>
                                         <span className="score-value">{formatScore(getEmployeeScore(emp))}%</span>
                                         <span className="meter" aria-hidden="true"><i style={{ width: `${Math.min(getEmployeeScore(emp), 100)}%` }}></i></span>
                                       </span>
@@ -2653,7 +2765,7 @@
             comments: '',
             ...(initialData || {}),
             fiscalYear: initialData ? getEmployeeFiscalYear(initialData) : getCurrentFiscalYear(),
-            period: initialData ? getEmployeePeriod(initialData) : periodOptions[0]
+            period: initialData ? getEmployeePeriod(initialData) : getCurrentPeriod()
           });
 
           const [kpiScores, setKpiScores] = useState(initialData?.kpiData || defaultKpi);
@@ -2685,25 +2797,48 @@
 
           const handleSubmit = (e) => {
             e.preventDefault();
-            if (!formData.employeeName) {
+            const employeeName = normalizeName(formData.employeeName || formData.name);
+            if (!employeeName) {
               alert("กรุณาระบุชื่อผู้รับการประเมิน");
               return;
             }
-            
+
+            // ข้อที่เว้นว่างจะถูกนับเป็น 0 หรือใช้คะแนนฝั่งเดียว จึงต้องให้คะแนนครบก่อนบันทึก
+            const scoreItems = [
+              ...kpiScores.map(item => ({ item, label: `ส่วนที่ 2 ข้อ ${item.id}` })),
+              ...behaviorScores.map(item => ({ item, label: `ส่วนที่ 3 ข้อ ${item.id}` }))
+            ];
+            const missingLabels = (field) => scoreItems.filter(({ item }) => !(Number(item[field]) > 0)).map(({ label }) => label);
+            const missingSelf = missingLabels('selfScore');
+            const missingManager = missingLabels('managerScore');
+            if (!isLoggedIn && missingSelf.length > 0) {
+              alert(`กรุณาให้คะแนนประเมินตนเองให้ครบทุกข้อ\nยังขาด: ${missingSelf.join(', ')}`);
+              return;
+            }
+            if (isLoggedIn && missingManager.length > 0 && missingManager.length < scoreItems.length) {
+              alert(`กรุณาให้คะแนนหัวหน้าประเมินให้ครบทุกข้อ\nยังขาด: ${missingManager.join(', ')}`);
+              return;
+            }
+            if (isLoggedIn && missingManager.length === scoreItems.length && missingSelf.length === scoreItems.length) {
+              alert('กรุณาให้คะแนนอย่างน้อยหนึ่งฝั่งให้ครบก่อนบันทึก');
+              return;
+            }
+
             const targetFiscalYear = String(formData.fiscalYear || getCurrentFiscalYear());
             const targetPeriod = formData.period || periodOptions[0];
             // การแก้ไขที่ย้ายชื่อ/ปี/รอบ ต้องไม่ไปซ้ำกับแบบประเมินอีกครั้งของบุคคลเดียวกัน
             const isSameRecordSlot = !!initialData
-              && getEmployeeName(initialData) === formData.employeeName
+              && normalizeName(getEmployeeName(initialData)) === employeeName
               && getEmployeeFiscalYear(initialData) === targetFiscalYear
               && getEmployeePeriod(initialData) === targetPeriod;
-            if (!isSameRecordSlot && hasEvaluationInPeriod(employees, formData.employeeName, targetFiscalYear, targetPeriod)) {
+            if (!isSameRecordSlot && hasEvaluationInPeriod(employees, employeeName, targetFiscalYear, targetPeriod)) {
               alert("บุคคลนี้มีแบบประเมินในปีงบประมาณและรอบนี้แล้ว! กรุณากลับไปที่หน้าแรกแล้วกดปุ่ม 'แก้ไข' ที่รายชื่อนั้นแทน");
               return;
             }
 
             onSubmit({
               ...formData,
+              employeeName,
               fiscalYear: targetFiscalYear,
               id: initialData?.id || newRecordId.current,
               kpiData: withStoredFiscalYear(kpiScores, targetFiscalYear),
@@ -2943,7 +3078,7 @@
                         
                         {isLoggedIn && (
                           <tr className="bg-slate-100 font-bold border-b border-x border-slate-200">
-                            <td className="p-3 text-right">รวม</td>
+                            <td colSpan={2} className="p-3 text-right">รวม</td>
                             <td className="p-3 text-center">100 %</td>
                             <td colSpan={4} className="p-3 text-right text-blue-700">
                               รวม {calculateBehaviorTotal().toFixed(2)} = {behaviorPercentage.toFixed(2)}%
@@ -3052,7 +3187,7 @@
               </div>
 
               {/* บังคับฟอนต์ TH Sarabun PSK และขนาดข้อความปกติที่ 16pt */}
-              <div className="print-report print-fit-two-pages p-8 print:p-0 text-black bg-white font-['TH_Sarabun_PSK','Sarabun',sans-serif] text-[16pt] leading-[1.3]">
+              <div className="print-report print-fit-two-pages p-8 print:p-0 text-black bg-white font-['TH_SarabunPSK','TH_Sarabun_PSK','Sarabun',sans-serif] text-[16pt] leading-[1.3]">
                 <div className="report-title text-center mb-6">
                   <h1 className="text-[18pt] font-bold mb-1">ใบสรุปผลการประเมินประสิทธิภาพการปฏิบัติงาน (รวมทุกรายชื่อ)</h1>
                   <h2 className="text-[18pt] font-normal">งานอุบัติเหตุฉุกเฉินและนิติเวช</h2>
@@ -3078,9 +3213,9 @@
                 </div>
 
                 {/* ตารางแยกตามรอบ จะไหลหน้ากระดาษและมีหัวตารางทุกหน้าอัตโนมัติ */}
-                {employeeGroups.map(({ period, items }) => (
-                  <div key={period} className="mt-4">
-                    <h3 className="text-[18pt] font-bold mb-1">{period}</h3>
+                {employeeGroups.map(({ period, fiscalYear, items }) => (
+                  <div key={`${fiscalYear || ''}-${period}`} className="mt-4">
+                    <h3 className="text-[18pt] font-bold mb-1">{getGroupTitle({ period, fiscalYear })}</h3>
                     <table className="w-full border-collapse border border-black">
                       <thead>
                         <tr className="bg-gray-100 text-center font-bold">
@@ -3173,7 +3308,7 @@
               </div>
 
               {/* บังคับฟอนต์ TH Sarabun PSK และขนาดข้อความปกติที่ 16pt ปรับลด padding เพื่อให้ชิดกรอบพอดี 1-2 หน้า */}
-              <div className="individual-print-report print-fit-two-pages p-8 print:p-0 text-black bg-white font-['TH_Sarabun_PSK','Sarabun',sans-serif] text-[16pt] leading-[1.3]">
+              <div className="individual-print-report print-fit-two-pages p-8 print:p-0 text-black bg-white font-['TH_SarabunPSK','TH_Sarabun_PSK','Sarabun',sans-serif] text-[16pt] leading-[1.3]">
                 <div className="text-center mb-4">
                   <h1 className="text-[18pt] font-bold mb-1">ใบสรุปผลการประเมินประสิทธิภาพการปฏิบัติงาน</h1>
                   <h2 className="text-[18pt] font-normal">งานอุบัติเหตุฉุกเฉินและนิติเวช</h2>
