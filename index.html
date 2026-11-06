@@ -1756,8 +1756,6 @@
           { id: 5, name: 'การทำงานเป็นทีม', target: 5, weight: 20, selfScore: 0, managerScore: 0 },
         ];
 
-        const MIN_EVALUATED_FOR_PUBLIC_AVG = 5;
-
         const fiscalYearOptions = ['2568', '2569', '2570', '2571', '2572'];
         const periodOptions = ['ครั้งที่ 1 (1 ต.ค. - 31 มี.ค.)', 'ครั้งที่ 2 (1 เม.ย. - 30 ก.ย.)'];
 
@@ -1831,14 +1829,15 @@
 
         const checkManagerEvaluated = (emp) => {
           if (!emp) return false;
+          // ข้อมูลสาธารณะไม่มีคะแนน เซิร์ฟเวอร์จึงบอกสถานะมาให้
+          if (typeof emp.managerEvaluated === 'boolean') return emp.managerEvaluated;
           const kpiDone = emp.kpiData ? emp.kpiData.some(k => k.managerScore > 0) : false;
           const behaviorDone = emp.behaviorData ? emp.behaviorData.some(b => b.managerScore > 0) : false;
           return kpiDone || behaviorDone;
         };
 
         // ชีตไม่มีคอลัมน์สถานะปลดล็อก จึงเก็บในรายการแรกของ kpiData เช่นเดียวกับปีงบประมาณ
-        const isSelfEditUnlocked = (emp) => Array.isArray(emp?.kpiData) && emp.kpiData[0]?.selfEditUnlocked === true;
-        const withSelfEditUnlocked = (kpiData, unlocked) => kpiData.map((item, index) => index === 0 ? { ...item, selfEditUnlocked: unlocked } : item);
+        const isSelfEditUnlocked = (emp) => emp?.selfEditUnlocked === true || (Array.isArray(emp?.kpiData) && emp.kpiData[0]?.selfEditUnlocked === true);
         const canSelfEdit = (emp) => !checkManagerEvaluated(emp) || isSelfEditUnlocked(emp);
 
         const getEmployeeName = (emp) => emp?.name || emp?.employeeName || 'ไม่ระบุชื่อ';
@@ -1869,51 +1868,56 @@
           return getEmployeeName(a).localeCompare(getEmployeeName(b), 'th');
         });
 
-        const isDatabaseConfigured = !!GOOGLE_SHEET_WEBAPP_URL && GOOGLE_SHEET_WEBAPP_URL !== "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE";
+        const API_ERROR_MESSAGES = {
+          AUTH: 'หมดเวลาการเข้าสู่ระบบ กรุณาเข้าสู่ระบบอีกครั้ง',
+          BAD_LOGIN: 'ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง',
+          RATE_LIMITED: 'ใส่รหัสผิดหลายครั้ง กรุณารอ 15 นาทีแล้วลองใหม่อีกครั้ง',
+          BAD_CODE: 'รหัสแก้ไขไม่ถูกต้อง',
+          NO_CODE: 'แบบประเมินนี้ยังไม่มีรหัสแก้ไข กรุณาติดต่อหัวหน้าเพื่อขอตั้งรหัส',
+          INVALID_CODE: 'รหัสแก้ไขต้องมีอย่างน้อย 4 ตัวอักษร',
+          LOCKED: 'หัวหน้าประเมินแบบฟอร์มนี้แล้วจึงแก้ไขไม่ได้ กรุณาติดต่อหัวหน้าเพื่อปลดล็อก',
+          DUPLICATE: 'บุคคลนี้มีแบบประเมินในปีงบประมาณและรอบนี้แล้ว',
+          NOT_FOUND: 'ไม่พบแบบประเมินนี้ในฐานข้อมูล กรุณารีเฟรชหน้าเว็บแล้วลองใหม่อีกครั้ง',
+          INVALID: 'ข้อมูลไม่ครบหรือไม่ถูกต้อง กรุณาตรวจสอบแล้วลองใหม่อีกครั้ง',
+          CONFIG: 'ระบบยังไม่ได้ตั้งค่าบัญชีหัวหน้าใน Script Properties',
+          BUSY: 'ระบบกำลังทำงานหนาแน่น กรุณาลองใหม่อีกครั้ง'
+        };
+        const CONNECTION_ERROR_MESSAGE = 'เชื่อมต่อฐานข้อมูลไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง';
+        const getApiErrorMessage = (error) => API_ERROR_MESSAGES[error?.code] || CONNECTION_ERROR_MESSAGE;
 
-        // อ่านข้อมูลล่าสุดจากฐานข้อมูล ถ้ามีแถว id ซ้ำจะใช้แถวล่างสุดของชีต
-        const fetchEmployeesFromDb = async () => {
-          const response = await fetch(`${GOOGLE_SHEET_WEBAPP_URL}?t=${Date.now()}`, { cache: 'no-store' });
+        const readApiResponse = async (response) => {
           const data = await response.json();
-          if (!Array.isArray(data)) throw new Error('Unexpected database response');
-          const rowsById = new Map();
-          data.forEach((emp, index) => rowsById.set(emp.id ?? `row-${index}`, emp));
-          return [...rowsById.values()].map(emp => ({
-            ...emp,
-            fiscalYear: getEmployeeFiscalYear(emp),
-            period: getEmployeePeriod(emp)
-          })).reverse();
-        };
-
-        const isSameDbText = (a, b) => String(a ?? '').trim() === String(b ?? '').trim();
-
-        const isRecordInDb = (row, record) => !!row
-          && isSameDbText(row.name, record.name)
-          && isSameDbText(row.position, record.position)
-          && isSameDbText(row.period, record.period)
-          && isSameDbText(row.comments, record.comments)
-          && isSameDbText(row.evaluatorName, record.evaluatorName)
-          && getEmployeeFiscalYear(row) === record.fiscalYear
-          && isSelfEditUnlocked(row) === isSelfEditUnlocked(record)
-          && Math.abs(getEmployeeScore(row) - getEmployeeScore(record)) < 0.01;
-
-        // ใช้ตรวจว่าหัวหน้าแก้ผลประเมินระหว่างที่ผู้รับการประเมินเปิดฟอร์มค้างไว้หรือไม่
-        const hasSameManagerResult = (a, b) => {
-          const managerScores = (emp, key) => (emp?.[key] || []).map(item => Number(item.managerScore) || 0).join(',');
-          return isSameDbText(a?.comments, b?.comments)
-            && isSameDbText(a?.evaluatorName, b?.evaluatorName)
-            && managerScores(a, 'kpiData') === managerScores(b, 'kpiData')
-            && managerScores(a, 'behaviorData') === managerScores(b, 'behaviorData');
-        };
-
-        // รอฐานข้อมูลอัปเดตสูงสุด 4 ครั้ง คืนรายการล่าสุดเมื่อพบข้อมูลที่บันทึก ไม่พบคืน null
-        const confirmRecordSaved = async (record) => {
-          for (const waitMs of [0, 1000, 2000, 2000]) {
-            if (waitMs) await new Promise(resolve => setTimeout(resolve, waitMs));
-            const rows = await fetchEmployeesFromDb();
-            if (isRecordInDb(rows.find(emp => emp.id === record.id), record)) return rows;
+          if (!data || data.ok !== true) {
+            const error = new Error(`API error: ${data?.code}`);
+            error.code = data?.code;
+            throw error;
           }
-          return null;
+          return data;
+        };
+
+        // ใช้ text/plain เพื่อให้เบราว์เซอร์ไม่ส่ง preflight ซึ่ง Apps Script ไม่รองรับ จึงอ่านผลตอบกลับได้
+        const callApi = async (action, payload = {}) => {
+          const response = await fetch(GOOGLE_SHEET_WEBAPP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ ...payload, action }),
+          });
+          return readApiResponse(response);
+        };
+
+        const normalizeRecord = (emp) => ({
+          ...emp,
+          fiscalYear: getEmployeeFiscalYear(emp),
+          period: getEmployeePeriod(emp)
+        });
+
+        // ไม่มี token ได้เฉพาะข้อมูลสาธารณะ มี token ของหัวหน้าจึงได้คะแนนและความเห็น
+        const fetchEmployeesFromDb = async (token) => {
+          const data = token
+            ? await callApi('list', { token })
+            : await readApiResponse(await fetch(`${GOOGLE_SHEET_WEBAPP_URL}?t=${Date.now()}`, { cache: 'no-store' }));
+          if (!Array.isArray(data.rows)) throw new Error('Unexpected database response');
+          return { rows: data.rows.map(normalizeRecord).reverse(), stats: data.stats || {} };
         };
 
         const filterEmployeesByReport = (list, filters) => list.filter(emp => {
@@ -2168,18 +2172,46 @@
           const isSavingRef = useRef(false);
           const loadRequestRef = useRef(0);
           const contentRef = useRef(null);
+          // เก็บในหน่วยความจำเท่านั้น รีเฟรชหน้าเว็บแล้วต้องเข้าสู่ระบบหรือใส่รหัสใหม่
+          const tokenRef = useRef(null);
+          const selfEditCodeRef = useRef('');
+          const [publicStats, setPublicStats] = useState({});
+          const [editCodeTarget, setEditCodeTarget] = useState(null);
 
           // เปลี่ยนหน้าแล้วเริ่มที่ด้านบนเสมอ ไม่ค้างตำแหน่งเลื่อนของหน้าก่อน
           useEffect(() => {
             if (contentRef.current) contentRef.current.scrollTop = 0;
           }, [currentView]);
 
+          const applyLoadedData = ({ rows, stats }) => {
+            setEmployees(rows);
+            setPublicStats(stats);
+            return rows;
+          };
+
+          // token หมดอายุ: ล้างข้อมูลของหัวหน้าออกจากหน้าจอ แล้วโหลดข้อมูลสาธารณะแทน
+          const endManagerSession = () => {
+            tokenRef.current = null;
+            loadRequestRef.current++;
+            setIsLoggedIn(false);
+            setEmployees([]);
+            setCurrentEval(null);
+            setCurrentView('dashboard');
+            fetchEmployeesFromDb(null).then(applyLoadedData).catch(error => console.error("Refresh Error:", error));
+          };
+
           // ดึงข้อมูลล่าสุดจากฐานข้อมูล ไม่ทับข้อมูลระหว่างบันทึก และไม่ใช้ผลของคำขอที่เก่ากว่า
           const refreshEmployees = async () => {
-            if (!isDatabaseConfigured || isSavingRef.current) return;
+            if (isSavingRef.current) return;
             const requestId = ++loadRequestRef.current;
-            const rows = await fetchEmployeesFromDb();
-            if (requestId === loadRequestRef.current && !isSavingRef.current) setEmployees(rows);
+            try {
+              const result = await fetchEmployeesFromDb(tokenRef.current);
+              if (requestId === loadRequestRef.current && !isSavingRef.current) applyLoadedData(result);
+            } catch (error) {
+              if (error.code !== 'AUTH') throw error;
+              alert(API_ERROR_MESSAGES.AUTH);
+              endManagerSession();
+            }
           };
 
           // ดึงข้อมูลตอนเปิดหน้าเว็บครั้งแรก
@@ -2218,175 +2250,119 @@
             setTimeout(() => setToastMessage(''), 3000);
           };
 
-          const handleDeleteEvaluation = async () => {
-            if (!itemToDelete || isSavingRef.current) return;
-            const targetId = itemToDelete.id;
-            const targetName = itemToDelete.name || itemToDelete.employeeName;
-            setItemToDelete(null);
-
-            if (!isDatabaseConfigured) {
-              setEmployees(employees.filter(e => e.id !== targetId));
-              showToast('ลบข้อมูลเรียบร้อยแล้ว');
-              return;
-            }
-
-            isSavingRef.current = true;
-            setIsSaving(true);
-            loadRequestRef.current++;
-
-            try {
-              showToast('กำลังลบข้อมูล...');
-              await fetch(GOOGLE_SHEET_WEBAPP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  action: 'delete',
-                  id: targetId,
-                  employeeName: targetName
-                }),
-              });
-
-              // คำขอแบบ no-cors อ่านผลตอบกลับไม่ได้ จึงอ่านฐานข้อมูลกลับมายืนยันว่าลบจริง
-              let rows = [];
-              for (const waitMs of [0, 1000, 2000, 2000]) {
-                if (waitMs) await new Promise(resolve => setTimeout(resolve, waitMs));
-                rows = await fetchEmployeesFromDb();
-                if (!rows.some(e => e.id === targetId)) break;
-              }
-              setEmployees(rows);
-              if (rows.some(e => e.id === targetId)) {
-                alert('ระบบยังพบข้อมูลนี้ในฐานข้อมูล การลบอาจไม่สำเร็จ กรุณาลองใหม่อีกครั้ง');
-              } else {
-                showToast('ลบข้อมูลเรียบร้อยแล้ว');
-              }
-            } catch (error) {
-              console.error('Delete error:', error);
-              alert('เชื่อมต่อฐานข้อมูลไม่สำเร็จ ยังยืนยันการลบไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง');
-            } finally {
-              isSavingRef.current = false;
-              setIsSaving(false);
-            }
-          };
-
-          const handleSaveEvaluation = async (evalData) => {
-            // กันการกดบันทึกซ้ำระหว่างรอ ซึ่งทำให้เกิดแถวซ้ำในฐานข้อมูล
-            if (!evalData || isSavingRef.current) return;
-
-            const recordToSave = {
-              ...evalData,
-              id: evalData.id || Date.now(),
-              name: evalData.employeeName || "ไม่ระบุชื่อ",
-              fiscalYear: getEmployeeFiscalYear(evalData),
-              period: getEmployeePeriod(evalData),
-              date: evalData.date || new Date().toISOString().split('T')[0]
-            };
-
-            if (!isDatabaseConfigured) {
-               const isExisting = employees.some(e => e.id === recordToSave.id);
-               setEmployees(isExisting ? employees.map(e => e.id === recordToSave.id ? recordToSave : e) : [recordToSave, ...employees]);
-               setCurrentEval(recordToSave);
-               showToast('บันทึกสำเร็จ (ระบบจำลองข้อมูล)');
-               setCurrentView('dashboard');
-               return;
-            }
-
-            isSavingRef.current = true;
-            setIsSaving(true);
-            loadRequestRef.current++;
-
-            try {
-              // หัวหน้าอาจลงคะแนนระหว่างที่เปิดฟอร์มค้างไว้ จึงตรวจกับฐานข้อมูลล่าสุดก่อนบันทึก
-              // มิฉะนั้นการบันทึกของผู้รับการประเมินจะเขียนทับคะแนนหัวหน้า
-              if (!isLoggedIn) {
-                const latestRows = await fetchEmployeesFromDb();
-                const latestRecord = latestRows.find(e => e.id === recordToSave.id);
-                if (latestRecord && (!canSelfEdit(latestRecord) || !hasSameManagerResult(latestRecord, recordToSave))) {
-                  setEmployees(latestRows);
-                  setCurrentEval(null);
-                  setCurrentView('dashboard');
-                  alert('หัวหน้าประเมินหรือเปลี่ยนแปลงแบบฟอร์มนี้แล้ว การแก้ไขครั้งนี้จึงยังไม่ถูกบันทึก กรุณาติดต่อหัวหน้าหากต้องการแก้ไข');
-                  return;
-                }
-                // ปลดล็อกใช้ได้ครั้งเดียว บันทึกแล้วกลับไปล็อกทันที เพื่อให้หัวหน้าตรวจผลล่าสุดได้
-                if (checkManagerEvaluated(latestRecord)) {
-                  recordToSave.kpiData = withSelfEditUnlocked(recordToSave.kpiData, false);
-                }
-              }
-
-              showToast('กำลังบันทึกข้อมูลไปยัง Google Sheets...');
-              await fetch(GOOGLE_SHEET_WEBAPP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  action: 'save',
-                  ...recordToSave
-                }),
-              });
-
-              // คำขอแบบ no-cors อ่านผลตอบกลับไม่ได้ จึงอ่านฐานข้อมูลกลับมายืนยันว่าบันทึกจริง
-              const rows = await confirmRecordSaved(recordToSave);
-              if (rows) {
-                setEmployees(rows);
-                setCurrentEval(rows.find(e => e.id === recordToSave.id) || recordToSave);
-                showToast('บันทึกลงฐานข้อมูลสำเร็จ!');
-                setCurrentView('dashboard');
-              } else {
-                alert('ระบบยังไม่พบข้อมูลที่แก้ไขในฐานข้อมูล ข้อมูลในฟอร์มยังอยู่ครบ กรุณากด "บันทึกข้อมูล" อีกครั้ง');
-              }
-            } catch (error) {
-              console.error(error);
-              alert('เชื่อมต่อฐานข้อมูลไม่สำเร็จ ข้อมูลในฟอร์มยังอยู่ครบ กรุณาตรวจสอบอินเทอร์เน็ตแล้วกด "บันทึกข้อมูล" อีกครั้ง');
-            } finally {
-              isSavingRef.current = false;
-              setIsSaving(false);
-            }
-          };
-
-          // หัวหน้าปลดล็อกหรือล็อกการแก้ไข โดยอ่านแถวล่าสุดก่อนเพื่อไม่ให้เขียนทับข้อมูลใหม่กว่า
-          const handleSetSelfEditUnlocked = async (emp, unlocked) => {
+          // กันการกดซ้ำระหว่างรอ และจัดการข้อผิดพลาดของคำขอเขียนข้อมูลที่เดียว
+          const runWrite = async (work) => {
             if (isSavingRef.current) return;
             isSavingRef.current = true;
             setIsSaving(true);
             loadRequestRef.current++;
-
             try {
-              showToast(unlocked ? 'กำลังปลดล็อก...' : 'กำลังล็อก...');
-              const latestRecord = (await fetchEmployeesFromDb()).find(e => e.id === emp.id);
-              if (!latestRecord) {
-                alert('ไม่พบแบบประเมินนี้ในฐานข้อมูล กรุณารีเฟรชหน้าเว็บแล้วลองใหม่อีกครั้ง');
-                return;
-              }
-
-              const name = getEmployeeName(latestRecord);
-              const recordToSave = {
-                ...latestRecord,
-                name,
-                employeeName: name,
-                kpiData: withSelfEditUnlocked(withStoredFiscalYear(latestRecord.kpiData, latestRecord.fiscalYear), unlocked)
-              };
-              await fetch(GOOGLE_SHEET_WEBAPP_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'save', ...recordToSave }),
-              });
-
-              const rows = await confirmRecordSaved(recordToSave);
-              if (rows) {
-                setEmployees(rows);
-                showToast(unlocked ? 'ปลดล็อกแล้ว ผู้รับการประเมินแก้ไขได้ 1 ครั้ง' : 'ล็อกการแก้ไขแล้ว');
-              } else {
-                alert(`ระบบยังยืนยันการ${unlocked ? 'ปลดล็อก' : 'ล็อก'}ไม่ได้ กรุณาลองใหม่อีกครั้ง`);
-              }
+              await work();
             } catch (error) {
               console.error(error);
-              alert('เชื่อมต่อฐานข้อมูลไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ตแล้วลองใหม่อีกครั้ง');
+              alert(getApiErrorMessage(error));
+              if (error.code === 'AUTH') endManagerSession();
             } finally {
               isSavingRef.current = false;
               setIsSaving(false);
             }
+          };
+
+          const reloadEmployees = async () => applyLoadedData(await fetchEmployeesFromDb(tokenRef.current));
+
+          const handleLogin = async (username, password) => {
+            try {
+              const { token } = await callApi('login', { username, password });
+              tokenRef.current = token;
+              loadRequestRef.current++;
+              await reloadEmployees();
+              setIsLoggedIn(true);
+              setCurrentView('dashboard');
+              return null;
+            } catch (error) {
+              console.error(error);
+              tokenRef.current = null;
+              return getApiErrorMessage(error);
+            }
+          };
+
+          const handleLogout = () => {
+            const token = tokenRef.current;
+            endManagerSession();
+            callApi('logout', { token }).catch(error => console.error('Logout error:', error));
+          };
+
+          // ผู้รับการประเมินใส่รหัสถูกต้องจึงได้ข้อมูลของตนเองมาแก้ไข
+          const handleOpenForEdit = async (code) => {
+            try {
+              const { record } = await callApi('openForEdit', { id: editCodeTarget.id, code });
+              selfEditCodeRef.current = code;
+              setCurrentEval(normalizeRecord(record));
+              setEditCodeTarget(null);
+              setCurrentView('form');
+              return null;
+            } catch (error) {
+              console.error(error);
+              if (error.code === 'LOCKED') refreshEmployees().catch(err => console.error("Refresh Error:", err));
+              return getApiErrorMessage(error);
+            }
+          };
+
+          const handleDeleteEvaluation = async () => {
+            if (!itemToDelete) return;
+            const targetId = itemToDelete.id;
+            setItemToDelete(null);
+            await runWrite(async () => {
+              showToast('กำลังลบข้อมูล...');
+              await callApi('delete', { token: tokenRef.current, id: targetId });
+              await reloadEmployees();
+              showToast('ลบข้อมูลเรียบร้อยแล้ว');
+            });
+          };
+
+          const handleSaveEvaluation = async (evalData) => {
+            if (!evalData) return;
+            const recordToSave = {
+              ...evalData,
+              fiscalYear: getEmployeeFiscalYear(evalData),
+              period: getEmployeePeriod(evalData)
+            };
+
+            await runWrite(async () => {
+              showToast('กำลังบันทึกข้อมูลไปยัง Google Sheets...');
+              try {
+                if (isLoggedIn) {
+                  await callApi('save', { ...recordToSave, name: evalData.employeeName, token: tokenRef.current });
+                } else if (currentEval) {
+                  await callApi('selfSave', { ...recordToSave, code: selfEditCodeRef.current });
+                } else {
+                  await callApi('selfCreate', recordToSave);
+                }
+              } catch (error) {
+                // หัวหน้าลงคะแนนหรือล็อกระหว่างเปิดฟอร์ม ข้อมูลเดิมจะไม่ถูกเขียนทับ
+                if (error.code === 'LOCKED') {
+                  await reloadEmployees().catch(err => console.error("Refresh Error:", err));
+                  setCurrentEval(null);
+                  setCurrentView('dashboard');
+                }
+                throw error;
+              }
+
+              const rows = await reloadEmployees();
+              selfEditCodeRef.current = '';
+              setCurrentEval(isLoggedIn ? rows.find(e => String(e.id) === String(recordToSave.id)) || null : null);
+              showToast('บันทึกลงฐานข้อมูลสำเร็จ!');
+              setCurrentView('dashboard');
+            });
+          };
+
+          const handleSetSelfEditUnlocked = async (emp, unlocked) => {
+            await runWrite(async () => {
+              showToast(unlocked ? 'กำลังปลดล็อก...' : 'กำลังล็อก...');
+              await callApi('setUnlocked', { token: tokenRef.current, id: emp.id, unlocked });
+              await reloadEmployees();
+              showToast(unlocked ? 'ปลดล็อกแล้ว ผู้รับการประเมินแก้ไขได้ 1 ครั้ง' : 'ล็อกการแก้ไขแล้ว');
+            });
           };
 
           // ป้องกันหน้าจอกระพริบตอนกำลังโหลด
@@ -2440,8 +2416,8 @@
                   
                   <div className="flex items-center gap-4">
                     {isLoggedIn ? (
-                      <button onClick={() => { setIsLoggedIn(false); setCurrentEval(null); setCurrentView('dashboard'); }} className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
-                        <LogOut className="w-5 h-5" /> ออกจากระบบ (wee)
+                      <button onClick={handleLogout} className="flex items-center gap-2 text-red-600 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors font-medium">
+                        <LogOut className="w-5 h-5" /> ออกจากระบบ
                       </button>
                     ) : (
                       <button onClick={() => setCurrentView('login')} className="flex items-center gap-2 text-slate-600 bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-lg transition-colors font-medium">
@@ -2491,14 +2467,30 @@
                     </div>
                   )}
 
-                  {currentView === 'login' && <LoginScreen onLogin={() => { setIsLoggedIn(true); setCurrentView('dashboard'); }} onCancel={() => setCurrentView('dashboard')} />}
+                  {editCodeTarget && (
+                    <EditCodeModal
+                      name={getEmployeeName(editCodeTarget)}
+                      onSubmit={handleOpenForEdit}
+                      onCancel={() => setEditCodeTarget(null)}
+                    />
+                  )}
+
+                  {currentView === 'login' && <LoginScreen onLogin={handleLogin} onCancel={() => setCurrentView('dashboard')} />}
                   
                   {currentView === 'dashboard' && (
                     <DashboardView 
                       isLoggedIn={isLoggedIn}
-                      employees={employees} 
-                      onNew={() => { setCurrentEval(null); setCurrentView('form'); }} 
-                      onEdit={(emp) => { setCurrentEval(emp); setCurrentView('form'); }}
+                      employees={employees}
+                      publicStats={publicStats}
+                      onNew={() => { setCurrentEval(null); setCurrentView('form'); }}
+                      onEdit={(emp) => {
+                        if (isLoggedIn) {
+                          setCurrentEval(emp);
+                          setCurrentView('form');
+                        } else {
+                          setEditCodeTarget(emp);
+                        }
+                      }}
                       onPrint={(emp) => { setCurrentEval(emp); setCurrentView('print'); }} 
                       onPrintAll={(filters) => { setPrintFilters(filters || { fiscalYear: 'all', period: 'all' }); setCurrentView('printAll'); }}
                       onDelete={(emp) => setItemToDelete(emp)}
@@ -2531,17 +2523,54 @@
         // COMPONENTS ย่อย
         // ==========================================
 
+        // ถามรหัสแก้ไขก่อนเปิดแบบประเมินของผู้รับการประเมิน
+        function EditCodeModal({ name, onSubmit, onCancel }) {
+          const [code, setCode] = useState('');
+          const [error, setError] = useState('');
+          const [isChecking, setIsChecking] = useState(false);
+
+          const handleSubmit = async (e) => {
+            e.preventDefault();
+            setIsChecking(true);
+            setError('');
+            const message = await onSubmit(code);
+            if (message) {
+              setError(message);
+              setIsChecking(false);
+            }
+          };
+
+          return (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 print:hidden">
+              <form onSubmit={handleSubmit} className="edit-code-modal bg-white p-6 rounded-2xl shadow-xl max-w-sm w-full border border-gray-100">
+                <h3 className="text-xl font-bold text-gray-900 mb-1">ใส่รหัสแก้ไข</h3>
+                <p className="text-sm text-gray-600 mb-4">แบบประเมินของ <span className="font-bold text-gray-900">{name}</span></p>
+                {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm border border-red-100">{error}</div>}
+                <input type="password" autoFocus required autoComplete="off" value={code} onChange={e => setCode(e.target.value)} aria-label="รหัสแก้ไข" className="w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500 outline-none mb-2" />
+                <p className="text-xs text-gray-500 mb-5">หากลืมรหัส กรุณาติดต่อหัวหน้าเพื่อขอตั้งรหัสใหม่</p>
+                <div className="flex justify-end gap-3">
+                  <button type="button" onClick={onCancel} className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">ยกเลิก</button>
+                  <button type="submit" disabled={isChecking} className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium shadow-md transition-colors disabled:opacity-60 disabled:cursor-wait">{isChecking ? 'กำลังตรวจสอบ...' : 'เปิดแบบประเมิน'}</button>
+                </div>
+              </form>
+            </div>
+          );
+        }
+
         function LoginScreen({ onLogin, onCancel }) {
           const [username, setUsername] = useState('');
           const [password, setPassword] = useState('');
           const [error, setError] = useState('');
+          const [isChecking, setIsChecking] = useState(false);
 
-          const handleSubmit = (e) => {
+          const handleSubmit = async (e) => {
             e.preventDefault();
-            if (username === 'wee' && password === '2112') {
-              onLogin();
-            } else {
-              setError('ชื่อผู้ใช้งานหรือรหัสผ่านไม่ถูกต้อง');
+            setIsChecking(true);
+            setError('');
+            const message = await onLogin(username, password);
+            if (message) {
+              setError(message);
+              setIsChecking(false);
             }
           };
 
@@ -2582,7 +2611,7 @@
           );
         }
 
-        function DashboardView({ isLoggedIn, employees, onNew, onEdit, onPrint, onDelete, onPrintAll, onSetSelfEditUnlocked, isSaving }) {
+        function DashboardView({ isLoggedIn, employees, publicStats, onNew, onEdit, onPrint, onDelete, onPrintAll, onSetSelfEditUnlocked, isSaving }) {
           const [filter, setFilter] = useState('all');
           const [searchTerm, setSearchTerm] = useState('');
           const [fiscalYearFilter, setFiscalYearFilter] = useState('all');
@@ -2613,8 +2642,9 @@
           const avgScore = evaluatedEmployees.length > 0 
             ? (evaluatedEmployees.reduce((sum, e) => sum + Number(e.totalScore || 0), 0) / evaluatedEmployees.length).toFixed(2)
             : "0.00";
-          // เมื่อมีผู้ถูกประเมินน้อย ค่าเฉลี่ยอาจเผยคะแนนรายคน จึงแสดงจริงเฉพาะหัวหน้า
-          const showAvgScore = isLoggedIn || evaluatedEmployees.length >= MIN_EVALUATED_FOR_PUBLIC_AVG;
+          // หน้าแรกไม่ได้รับคะแนนรายคน เซิร์ฟเวอร์คำนวณค่าเฉลี่ยให้เฉพาะกลุ่มที่ประเมินแล้วถึงเกณฑ์
+          const publicAvg = publicStats?.[`${fiscalYearFilter}|${periodFilter}`]?.avg;
+          const displayAvg = isLoggedIn ? avgScore : (publicAvg === undefined ? null : Number(publicAvg).toFixed(2));
 
           return (
             <div className="dashboard-view space-y-6 max-w-6xl mx-auto">
@@ -2662,9 +2692,9 @@
                 />
                 <StatCard
                   title="คะแนนเฉลี่ยรวม"
-                  value={showAvgScore ? avgScore : '-'}
+                  value={displayAvg === null ? '-' : displayAvg}
                   icon={<FileText className="w-8 h-8 text-purple-500" />}
-                  progress={showAvgScore ? Number(avgScore) : undefined}
+                  progress={displayAvg === null ? undefined : Number(displayAvg)}
                 />
               </div>
 
@@ -2921,6 +2951,9 @@
             period: 'ครั้งที่ 1 (1 ต.ค. - 31 มี.ค.)',
             evaluatorName: '',
             comments: '',
+            editCode: '',
+            editCodeConfirm: '',
+            newEditCode: '',
             ...(initialData || {}),
             fiscalYear: initialData ? getEmployeeFiscalYear(initialData) : getCurrentFiscalYear(),
             period: initialData ? getEmployeePeriod(initialData) : getCurrentPeriod()
@@ -2979,6 +3012,21 @@
             }
             if (isLoggedIn && missingManager.length === scoreItems.length && missingSelf.length === scoreItems.length) {
               alert('กรุณาให้คะแนนอย่างน้อยหนึ่งฝั่งให้ครบก่อนบันทึก');
+              return;
+            }
+
+            if (!isLoggedIn && !initialData) {
+              if (String(formData.editCode).trim().length < 4) {
+                alert('กรุณาตั้งรหัสแก้ไขอย่างน้อย 4 ตัวอักษร');
+                return;
+              }
+              if (formData.editCode !== formData.editCodeConfirm) {
+                alert('รหัสแก้ไขทั้งสองช่องไม่ตรงกัน');
+                return;
+              }
+            }
+            if (isLoggedIn && formData.newEditCode && String(formData.newEditCode).trim().length < 4) {
+              alert('รหัสแก้ไขใหม่ต้องมีอย่างน้อย 4 ตัวอักษร');
               return;
             }
 
@@ -3282,6 +3330,28 @@
                       <div>
                         <label className="block text-sm font-bold text-gray-700 mb-2">ชื่อผู้ประเมิน (หัวหน้า)</label>
                         <input type="text" value={formData.evaluatorName || ''} onChange={e => setFormData({...formData, evaluatorName: e.target.value})} className="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-green-500 focus:border-green-500" placeholder="ลงชื่อผู้ประเมิน"/>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-sm font-bold text-gray-700 mb-2">ตั้งรหัสแก้ไขใหม่ให้ผู้รับการประเมิน (ถ้าต้องการ)</label>
+                        <input type="password" autoComplete="new-password" value={formData.newEditCode || ''} onChange={e => setFormData({...formData, newEditCode: e.target.value})} className="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-green-500 focus:border-green-500" placeholder="เว้นว่างไว้ถ้าไม่เปลี่ยน อย่างน้อย 4 ตัวอักษร" />
+                        <p className="text-xs text-gray-500 mt-1">{initialData?.hasEditCode ? 'แบบประเมินนี้มีรหัสแก้ไขแล้ว' : 'แบบประเมินนี้ยังไม่มีรหัสแก้ไข ผู้รับการประเมินจะแก้ไขเองไม่ได้จนกว่าจะตั้งรหัส'}</p>
+                      </div>
+                    </div>
+                  </section>
+                )}
+
+                {!isLoggedIn && !initialData && (
+                  <section className="bg-slate-50 border border-slate-200 rounded-xl p-6">
+                    <h3 className="text-lg font-bold text-gray-800 mb-1">ตั้งรหัสแก้ไข</h3>
+                    <p className="text-sm text-gray-600 mb-4">ใช้รหัสนี้เมื่อต้องการกลับมาแก้ไขแบบประเมินของคุณ กรุณาจำไว้ หากลืมต้องให้หัวหน้าตั้งรหัสใหม่</p>
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">รหัสแก้ไข (อย่างน้อย 4 ตัวอักษร)</label>
+                        <input type="password" required autoComplete="new-password" value={formData.editCode || ''} onChange={e => setFormData({...formData, editCode: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500" />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">ยืนยันรหัสแก้ไข</label>
+                        <input type="password" required autoComplete="new-password" value={formData.editCodeConfirm || ''} onChange={e => setFormData({...formData, editCodeConfirm: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500" />
                       </div>
                     </div>
                   </section>
