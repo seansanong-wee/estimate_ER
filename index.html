@@ -1905,6 +1905,11 @@
           return readApiResponse(response);
         };
 
+        // แสดงรหัสแก้ไขให้เห็น เพื่อให้รู้ทันทีถ้าแป้นพิมพ์เป็นภาษาไทย และเบราว์เซอร์จะไม่เติมรหัสผ่านที่บันทึกไว้ลงช่องนี้
+        const EDIT_CODE_INPUT_PROPS = { type: 'text', autoComplete: 'off', autoCapitalize: 'none', autoCorrect: 'off', spellCheck: false };
+        const hasNonEnglishChars = (text) => /[^\x20-\x7E]/.test(String(text ?? ''));
+        const NON_ENGLISH_CODE_MESSAGE = 'รหัสแก้ไขใช้ได้เฉพาะตัวเลขหรือตัวอักษรภาษาอังกฤษ กรุณาตรวจว่าแป้นพิมพ์เป็นภาษาอังกฤษ';
+
         const normalizeRecord = (emp) => ({
           ...emp,
           fiscalYear: getEmployeeFiscalYear(emp),
@@ -2546,8 +2551,9 @@
                 <h3 className="text-xl font-bold text-gray-900 mb-1">ใส่รหัสแก้ไข</h3>
                 <p className="text-sm text-gray-600 mb-4">แบบประเมินของ <span className="font-bold text-gray-900">{name}</span></p>
                 {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg mb-4 text-sm border border-red-100">{error}</div>}
-                <input type="password" autoFocus required autoComplete="off" value={code} onChange={e => setCode(e.target.value)} aria-label="รหัสแก้ไข" className="w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500 outline-none mb-2" />
-                <p className="text-xs text-gray-500 mb-5">หากลืมรหัส กรุณาติดต่อหัวหน้าเพื่อขอตั้งรหัสใหม่</p>
+                <input {...EDIT_CODE_INPUT_PROPS} autoFocus required value={code} onChange={e => setCode(e.target.value)} aria-label="รหัสแก้ไข" className="edit-code-input w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500 outline-none mb-2" />
+                {hasNonEnglishChars(code) && <p className="text-xs text-orange-700 mb-2">แป้นพิมพ์อาจเป็นภาษาไทยอยู่ ตรวจรหัสที่พิมพ์อีกครั้ง</p>}
+                <p className="text-xs text-gray-500 mb-5">ตัวพิมพ์เล็กและใหญ่ถือว่าต่างกัน แต่ละรอบการประเมินมีรหัสแยกกัน หากลืมรหัส กรุณาติดต่อหัวหน้าเพื่อขอตั้งรหัสใหม่</p>
                 <div className="flex justify-end gap-3">
                   <button type="button" onClick={onCancel} className="px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors">ยกเลิก</button>
                   <button type="submit" disabled={isChecking} className="px-4 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded-lg font-medium shadow-md transition-colors disabled:opacity-60 disabled:cursor-wait">{isChecking ? 'กำลังตรวจสอบ...' : 'เปิดแบบประเมิน'}</button>
@@ -3020,6 +3026,10 @@
                 alert('กรุณาตั้งรหัสแก้ไขอย่างน้อย 4 ตัวอักษร');
                 return;
               }
+              if (hasNonEnglishChars(formData.editCode)) {
+                alert(NON_ENGLISH_CODE_MESSAGE);
+                return;
+              }
               if (formData.editCode !== formData.editCodeConfirm) {
                 alert('รหัสแก้ไขทั้งสองช่องไม่ตรงกัน');
                 return;
@@ -3027,6 +3037,10 @@
             }
             if (isLoggedIn && formData.newEditCode && String(formData.newEditCode).trim().length < 4) {
               alert('รหัสแก้ไขใหม่ต้องมีอย่างน้อย 4 ตัวอักษร');
+              return;
+            }
+            if (isLoggedIn && hasNonEnglishChars(formData.newEditCode)) {
+              alert(NON_ENGLISH_CODE_MESSAGE);
               return;
             }
 
@@ -3333,7 +3347,7 @@
                       </div>
                       <div className="col-span-2">
                         <label className="block text-sm font-bold text-gray-700 mb-2">ตั้งรหัสแก้ไขใหม่ให้ผู้รับการประเมิน (ถ้าต้องการ)</label>
-                        <input type="password" autoComplete="new-password" value={formData.newEditCode || ''} onChange={e => setFormData({...formData, newEditCode: e.target.value})} className="w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-green-500 focus:border-green-500" placeholder="เว้นว่างไว้ถ้าไม่เปลี่ยน อย่างน้อย 4 ตัวอักษร" />
+                        <input {...EDIT_CODE_INPUT_PROPS} value={formData.newEditCode || ''} onChange={e => setFormData({...formData, newEditCode: e.target.value})} className="edit-code-input w-full border border-gray-300 rounded-lg p-3 bg-white focus:ring-green-500 focus:border-green-500" placeholder="เว้นว่างไว้ถ้าไม่เปลี่ยน ใช้ตัวเลขหรือภาษาอังกฤษ อย่างน้อย 4 ตัว" />
                         <p className="text-xs text-gray-500 mt-1">{initialData?.hasEditCode ? 'แบบประเมินนี้มีรหัสแก้ไขแล้ว' : 'แบบประเมินนี้ยังไม่มีรหัสแก้ไข ผู้รับการประเมินจะแก้ไขเองไม่ได้จนกว่าจะตั้งรหัส'}</p>
                       </div>
                     </div>
@@ -3346,12 +3360,12 @@
                     <p className="text-sm text-gray-600 mb-4">ใช้รหัสนี้เมื่อต้องการกลับมาแก้ไขแบบประเมินของคุณ กรุณาจำไว้ หากลืมต้องให้หัวหน้าตั้งรหัสใหม่</p>
                     <div className="grid grid-cols-2 gap-6">
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">รหัสแก้ไข (อย่างน้อย 4 ตัวอักษร)</label>
-                        <input type="password" required autoComplete="new-password" value={formData.editCode || ''} onChange={e => setFormData({...formData, editCode: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500" />
+                        <label className="block text-sm font-medium text-gray-700 mb-1">รหัสแก้ไข (ตัวเลขหรือภาษาอังกฤษ อย่างน้อย 4 ตัว)</label>
+                        <input {...EDIT_CODE_INPUT_PROPS} required value={formData.editCode || ''} onChange={e => setFormData({...formData, editCode: e.target.value})} className="edit-code-input w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500" />
                       </div>
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">ยืนยันรหัสแก้ไข</label>
-                        <input type="password" required autoComplete="new-password" value={formData.editCodeConfirm || ''} onChange={e => setFormData({...formData, editCodeConfirm: e.target.value})} className="w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500" />
+                        <input {...EDIT_CODE_INPUT_PROPS} required value={formData.editCodeConfirm || ''} onChange={e => setFormData({...formData, editCodeConfirm: e.target.value})} className="edit-code-input w-full border border-gray-300 rounded-lg p-2.5 focus:ring-blue-500 focus:border-blue-500" />
                       </div>
                     </div>
                   </section>
